@@ -16,6 +16,7 @@ import { Route as AuthenticatedFinanceRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedHealthRouteImport } from './routes/_authenticated/health'
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
 import { Route as AuthenticatedLifeRouteImport } from './routes/_authenticated/life'
+import { Route as AuthenticatedSchoolRouteImport } from './routes/_authenticated/school'
 import { Route as AuthLoginRouteImport } from './routes/auth.login'
 import { Route as AuthSignupRouteImport } from './routes/auth.signup'
 
@@ -53,6 +54,11 @@ const AuthenticatedLifeRoute = AuthenticatedLifeRouteImport.update({
   path: '/life',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSchoolRoute = AuthenticatedSchoolRouteImport.update({
+  id: '/school',
+  path: '/school',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/auth/login',
   path: '/auth/login',
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/health': typeof AuthenticatedHealthRoute
   '/home': typeof AuthenticatedHomeRoute
   '/life': typeof AuthenticatedLifeRoute
+  '/school': typeof AuthenticatedSchoolRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
 }
@@ -81,6 +88,7 @@ export interface FileRoutesByTo {
   '/health': typeof AuthenticatedHealthRoute
   '/home': typeof AuthenticatedHomeRoute
   '/life': typeof AuthenticatedLifeRoute
+  '/school': typeof AuthenticatedSchoolRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
 }
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/_authenticated/health': typeof AuthenticatedHealthRoute
   '/_authenticated/home': typeof AuthenticatedHomeRoute
   '/_authenticated/life': typeof AuthenticatedLifeRoute
+  '/_authenticated/school': typeof AuthenticatedSchoolRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
 }
@@ -105,6 +114,7 @@ export interface FileRouteTypes {
     | '/health'
     | '/home'
     | '/life'
+    | '/school'
     | '/auth/login'
     | '/auth/signup'
   fileRoutesByTo: FileRoutesByTo
@@ -115,6 +125,7 @@ export interface FileRouteTypes {
     | '/health'
     | '/home'
     | '/life'
+    | '/school'
     | '/auth/login'
     | '/auth/signup'
   id:
@@ -126,6 +137,7 @@ export interface FileRouteTypes {
     | '/_authenticated/health'
     | '/_authenticated/home'
     | '/_authenticated/life'
+    | '/_authenticated/school'
     | '/auth/login'
     | '/auth/signup'
   fileRoutesById: FileRoutesById
@@ -189,6 +201,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLifeRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/school': {
+      id: '/_authenticated/school'
+      path: '/school'
+      fullPath: '/school'
+      preLoaderRoute: typeof AuthenticatedSchoolRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/auth/login': {
       id: '/auth/login'
       path: '/auth/login'
@@ -211,6 +230,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedHealthRoute: typeof AuthenticatedHealthRoute
   AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
   AuthenticatedLifeRoute: typeof AuthenticatedLifeRoute
+  AuthenticatedSchoolRoute: typeof AuthenticatedSchoolRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -218,6 +238,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedHealthRoute: AuthenticatedHealthRoute,
   AuthenticatedHomeRoute: AuthenticatedHomeRoute,
   AuthenticatedLifeRoute: AuthenticatedLifeRoute,
+  AuthenticatedSchoolRoute: AuthenticatedSchoolRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -233,13 +254,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
