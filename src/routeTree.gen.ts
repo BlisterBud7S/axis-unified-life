@@ -17,6 +17,7 @@ import { Route as AuthenticatedHealthRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
 import { Route as AuthenticatedLifeRouteImport } from './routes/_authenticated/life'
 import { Route as AuthenticatedSchoolRouteImport } from './routes/_authenticated/school'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthLoginRouteImport } from './routes/auth.login'
 import { Route as AuthSignupRouteImport } from './routes/auth.signup'
 
@@ -59,6 +60,11 @@ const AuthenticatedSchoolRoute = AuthenticatedSchoolRouteImport.update({
   path: '/school',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/auth/login',
   path: '/auth/login',
@@ -78,6 +84,7 @@ export interface FileRoutesByFullPath {
   '/home': typeof AuthenticatedHomeRoute
   '/life': typeof AuthenticatedLifeRoute
   '/school': typeof AuthenticatedSchoolRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
 }
@@ -89,6 +96,7 @@ export interface FileRoutesByTo {
   '/home': typeof AuthenticatedHomeRoute
   '/life': typeof AuthenticatedLifeRoute
   '/school': typeof AuthenticatedSchoolRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
 }
@@ -102,6 +110,7 @@ export interface FileRoutesById {
   '/_authenticated/home': typeof AuthenticatedHomeRoute
   '/_authenticated/life': typeof AuthenticatedLifeRoute
   '/_authenticated/school': typeof AuthenticatedSchoolRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
 }
@@ -115,6 +124,7 @@ export interface FileRouteTypes {
     | '/home'
     | '/life'
     | '/school'
+    | '/settings'
     | '/auth/login'
     | '/auth/signup'
   fileRoutesByTo: FileRoutesByTo
@@ -126,6 +136,7 @@ export interface FileRouteTypes {
     | '/home'
     | '/life'
     | '/school'
+    | '/settings'
     | '/auth/login'
     | '/auth/signup'
   id:
@@ -138,6 +149,7 @@ export interface FileRouteTypes {
     | '/_authenticated/home'
     | '/_authenticated/life'
     | '/_authenticated/school'
+    | '/_authenticated/settings'
     | '/auth/login'
     | '/auth/signup'
   fileRoutesById: FileRoutesById
@@ -208,6 +220,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSchoolRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/auth/login': {
       id: '/auth/login'
       path: '/auth/login'
@@ -231,6 +250,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
   AuthenticatedLifeRoute: typeof AuthenticatedLifeRoute
   AuthenticatedSchoolRoute: typeof AuthenticatedSchoolRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -239,6 +259,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedHomeRoute: AuthenticatedHomeRoute,
   AuthenticatedLifeRoute: AuthenticatedLifeRoute,
   AuthenticatedSchoolRoute: AuthenticatedSchoolRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
