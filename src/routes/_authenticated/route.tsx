@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { AuthProvider, useAuth, useProfile } from "@/lib/auth";
+import { useAuth, useProfile } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { Link, Outlet, createFileRoute, redirect, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -23,7 +23,7 @@ export const Route = createFileRoute("/_authenticated")({
     if (error || !data.user) throw redirect({ to: "/auth/login" });
     return { user: data.user };
   },
-  component: AppLayout,
+  component: Shell,
 });
 
 const NAV = [
@@ -36,14 +36,6 @@ const NAV = [
   { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
-function AppLayout() {
-  return (
-    <AuthProvider>
-      <Shell />
-    </AuthProvider>
-  );
-}
-
 function Shell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
@@ -53,7 +45,7 @@ function Shell() {
   const [open, setOpen] = useState(false);
 
   const needsOnboarding =
-    !!user && !isLoading && profile !== undefined && (!profile?.full_name || !profile?.primary_goal);
+    !!user && !isLoading && profile !== undefined && !profile?.full_name;
 
   if (needsOnboarding && pathname !== "/onboarding") {
     navigate({ to: "/onboarding" });
