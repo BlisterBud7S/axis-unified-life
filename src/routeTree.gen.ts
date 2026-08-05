@@ -13,8 +13,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as AuthenticatedFinanceRouteImport } from './routes/_authenticated/finance'
+import { Route as AuthenticatedHealthRouteImport } from './routes/_authenticated/health'
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
 import { Route as AuthenticatedLifeRouteImport } from './routes/_authenticated/life'
+import { Route as AuthenticatedSchoolRouteImport } from './routes/_authenticated/school'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthLoginRouteImport } from './routes/auth.login'
 import { Route as AuthSignupRouteImport } from './routes/auth.signup'
 
@@ -37,6 +40,11 @@ const AuthenticatedFinanceRoute = AuthenticatedFinanceRouteImport.update({
   path: '/finance',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedHealthRoute = AuthenticatedHealthRouteImport.update({
+  id: '/health',
+  path: '/health',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedHomeRoute = AuthenticatedHomeRouteImport.update({
   id: '/home',
   path: '/home',
@@ -45,6 +53,16 @@ const AuthenticatedHomeRoute = AuthenticatedHomeRouteImport.update({
 const AuthenticatedLifeRoute = AuthenticatedLifeRouteImport.update({
   id: '/life',
   path: '/life',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSchoolRoute = AuthenticatedSchoolRouteImport.update({
+  id: '/school',
+  path: '/school',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
@@ -62,8 +80,11 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/onboarding': typeof OnboardingRoute
   '/finance': typeof AuthenticatedFinanceRoute
+  '/health': typeof AuthenticatedHealthRoute
   '/home': typeof AuthenticatedHomeRoute
   '/life': typeof AuthenticatedLifeRoute
+  '/school': typeof AuthenticatedSchoolRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
 }
@@ -71,8 +92,11 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/onboarding': typeof OnboardingRoute
   '/finance': typeof AuthenticatedFinanceRoute
+  '/health': typeof AuthenticatedHealthRoute
   '/home': typeof AuthenticatedHomeRoute
   '/life': typeof AuthenticatedLifeRoute
+  '/school': typeof AuthenticatedSchoolRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
 }
@@ -82,8 +106,11 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/onboarding': typeof OnboardingRoute
   '/_authenticated/finance': typeof AuthenticatedFinanceRoute
+  '/_authenticated/health': typeof AuthenticatedHealthRoute
   '/_authenticated/home': typeof AuthenticatedHomeRoute
   '/_authenticated/life': typeof AuthenticatedLifeRoute
+  '/_authenticated/school': typeof AuthenticatedSchoolRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
 }
@@ -93,8 +120,11 @@ export interface FileRouteTypes {
     | '/'
     | '/onboarding'
     | '/finance'
+    | '/health'
     | '/home'
     | '/life'
+    | '/school'
+    | '/settings'
     | '/auth/login'
     | '/auth/signup'
   fileRoutesByTo: FileRoutesByTo
@@ -102,8 +132,11 @@ export interface FileRouteTypes {
     | '/'
     | '/onboarding'
     | '/finance'
+    | '/health'
     | '/home'
     | '/life'
+    | '/school'
+    | '/settings'
     | '/auth/login'
     | '/auth/signup'
   id:
@@ -112,8 +145,11 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/onboarding'
     | '/_authenticated/finance'
+    | '/_authenticated/health'
     | '/_authenticated/home'
     | '/_authenticated/life'
+    | '/_authenticated/school'
+    | '/_authenticated/settings'
     | '/auth/login'
     | '/auth/signup'
   fileRoutesById: FileRoutesById
@@ -156,6 +192,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFinanceRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/health': {
+      id: '/_authenticated/health'
+      path: '/health'
+      fullPath: '/health'
+      preLoaderRoute: typeof AuthenticatedHealthRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/home': {
       id: '/_authenticated/home'
       path: '/home'
@@ -168,6 +211,20 @@ declare module '@tanstack/react-router' {
       path: '/life'
       fullPath: '/life'
       preLoaderRoute: typeof AuthenticatedLifeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/school': {
+      id: '/_authenticated/school'
+      path: '/school'
+      fullPath: '/school'
+      preLoaderRoute: typeof AuthenticatedSchoolRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/auth/login': {
@@ -189,14 +246,20 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedFinanceRoute: typeof AuthenticatedFinanceRoute
+  AuthenticatedHealthRoute: typeof AuthenticatedHealthRoute
   AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
   AuthenticatedLifeRoute: typeof AuthenticatedLifeRoute
+  AuthenticatedSchoolRoute: typeof AuthenticatedSchoolRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedFinanceRoute: AuthenticatedFinanceRoute,
+  AuthenticatedHealthRoute: AuthenticatedHealthRoute,
   AuthenticatedHomeRoute: AuthenticatedHomeRoute,
   AuthenticatedLifeRoute: AuthenticatedLifeRoute,
+  AuthenticatedSchoolRoute: AuthenticatedSchoolRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
