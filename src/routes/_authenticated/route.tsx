@@ -1,3 +1,4 @@
+import { FloatingAI } from "@/components/axis/FloatingAI";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useProfile } from "@/lib/auth";
 import { cn } from "@/lib/utils";
@@ -12,9 +13,11 @@ import {
   LogOut,
   Menu,
   Settings,
+  Sparkles,
   Wallet,
 } from "lucide-react";
 import { useState } from "react";
+
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -33,7 +36,9 @@ const NAV = [
   { to: "/health", label: "Health", icon: HeartPulse },
   { to: "/school", label: "School", icon: GraduationCap },
   { to: "/ai", label: "AI Hub", icon: Bot },
+  { to: "/plans", label: "Plans", icon: Sparkles },
   { to: "/settings", label: "Settings", icon: Settings },
+
 ] as const;
 
 function Shell() {
@@ -110,6 +115,8 @@ function Shell() {
           <Outlet />
         </main>
       </div>
+      <FloatingAI />
+
     </div>
   );
 }

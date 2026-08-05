@@ -2,7 +2,9 @@ import { Button } from "@/components/axis/Button";
 import { Card, CardTitle } from "@/components/axis/Card";
 import { Header } from "@/components/axis/Header";
 import { Input, Label, Select, Textarea } from "@/components/axis/Field";
+import { MealScanner } from "@/components/axis/MealScanner";
 import { ProgressBar } from "@/components/axis/ProgressBar";
+
 import { StatCard } from "@/components/axis/StatCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useProfile } from "@/lib/auth";
@@ -348,7 +350,9 @@ function NutritionTab() {
   const { user } = useAuth();
   const { data: profile } = useProfile();
   const qc = useQueryClient();
+  const [mode, setMode] = useState<"manual" | "scan">("manual");
   const [name, setName] = useState("");
+
   const [calories, setCalories] = useState("");
   const [protein, setProtein] = useState("");
   const [carbs, setCarbs] = useState("");
@@ -505,8 +509,33 @@ function NutritionTab() {
       </div>
 
       <Card className="h-fit">
-        <CardTitle>Log a meal</CardTitle>
+        <CardTitle
+          action={
+            <div className="flex gap-1 rounded-lg border border-border p-0.5">
+              {(["manual", "scan"] as const).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setMode(m)}
+                  className={cn(
+                    "rounded-md px-2 py-1 text-xs capitalize transition-colors",
+                    mode === m
+                      ? "bg-primary/15 text-primary"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {m === "manual" ? "Manual" : "Scan photo"}
+                </button>
+              ))}
+            </div>
+          }
+        >
+          Log a meal
+        </CardTitle>
+        {mode === "scan" ? (
+          <MealScanner onLogged={invalidate} />
+        ) : (
         <form
+
           className="space-y-3"
           onSubmit={(e) => {
             e.preventDefault();
@@ -571,6 +600,8 @@ function NutritionTab() {
             <Plus className="h-4 w-4" /> {addMeal.isPending ? "Saving…" : "Add meal"}
           </Button>
         </form>
+        )}
+
       </Card>
     </div>
   );

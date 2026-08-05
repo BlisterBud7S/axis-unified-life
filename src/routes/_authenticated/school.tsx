@@ -2,7 +2,9 @@ import { Button } from "@/components/axis/Button";
 import { Card, CardTitle } from "@/components/axis/Card";
 import { Header } from "@/components/axis/Header";
 import { Input, Label, Select, Textarea } from "@/components/axis/Field";
+import { SchoolRoadmap } from "@/components/axis/SchoolRoadmap";
 import { StatCard } from "@/components/axis/StatCard";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
@@ -443,6 +445,13 @@ function Schools() {
                       <Plus className="h-4 w-4" />
                     </Button>
                   </form>
+
+                  <SchoolRoadmap
+                    schoolId={s.id}
+                    schoolName={s.school_name}
+                    onChecklistUpdated={invalidate}
+                  />
+
                 </Card>
               );
             })
