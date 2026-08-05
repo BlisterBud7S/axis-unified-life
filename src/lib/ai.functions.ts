@@ -1,0 +1,68 @@
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+
+const ChatInput = z.object({
+  message: z.string().min(1).max(6000),
+  modelId: z.string().min(1),
+  useContext: z.boolean(),
+  source: z.string().min(1).max(40),
+  history: z
+    .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() }))
+    .max(30)
+    .default([]),
+});
+
+const ScanInput = z.object({
+  imageDataUrl: z.string().startsWith("data:image/"),
+  modelId: z.string().min(1),
+  hint: z.string().max(300).optional(),
+});
+
+const PlanInput = z.object({
+  schoolId: z.string().uuid(),
+  modelId: z.string().min(1),
+});
+
+export const axisChat = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => ChatInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const { chat } = await import("@/lib/axis-ai.server");
+    return chat({
+      supabase: context.supabase,
+      userId: context.userId,
+      modelId: data.modelId,
+      history: data.history,
+      message: data.message,
+      useContext: data.useContext,
+      source: data.source,
+    });
+  });
+
+export const scanMealPhoto = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => ScanInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const { scanMeal } = await import("@/lib/axis-ai.server");
+    return scanMeal({
+      supabase: context.supabase,
+      userId: context.userId,
+      modelId: data.modelId,
+      imageDataUrl: data.imageDataUrl,
+      ...(data.hint ? { hint: data.hint } : {}),
+    });
+  });
+
+export const generateSchoolPlan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => PlanInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const { schoolPlan } = await import("@/lib/axis-ai.server");
+    return schoolPlan({
+      supabase: context.supabase,
+      userId: context.userId,
+      modelId: data.modelId,
+      schoolId: data.schoolId,
+    });
+  });
