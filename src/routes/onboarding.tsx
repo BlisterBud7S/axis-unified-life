@@ -26,6 +26,7 @@ const GOALS = [
   { key: "save_money", label: "Save Money", desc: "Track every rupee in and out" },
   { key: "get_organized", label: "Get Organized", desc: "Tasks, habits and a clear calendar" },
   { key: "ace_school", label: "Ace School Applications", desc: "Deadlines and checklists, handled" },
+  { key: "all", label: "All of the above", desc: "Balance every pillar — AXIS shows the full picture" },
 ];
 
 function Onboarding() {
