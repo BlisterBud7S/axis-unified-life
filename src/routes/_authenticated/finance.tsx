@@ -220,7 +220,7 @@ function FinancePage() {
                 <YAxis stroke="var(--muted-foreground)" fontSize={12} width={48} />
                 <Tooltip
                   contentStyle={{
-                    background: "var(--card)",
+                    background: "var(--popover)",
                     border: "1px solid var(--border)",
                     borderRadius: 12,
                     fontSize: 12,
@@ -258,7 +258,7 @@ function FinancePage() {
                   </Pie>
                   <Tooltip
                     contentStyle={{
-                      background: "var(--card)",
+                      background: "var(--popover)",
                       border: "1px solid var(--border)",
                       borderRadius: 12,
                       fontSize: 12,
