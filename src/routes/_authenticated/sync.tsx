@@ -49,7 +49,7 @@ export const Route = createFileRoute("/_authenticated/sync")({
 });
 
 function SyncPage() {
-  const { profile } = useProfile();
+  const { data: profile } = useProfile();
   const tier = effectiveTier(profile);
   const config = tierConfig(tier);
 
