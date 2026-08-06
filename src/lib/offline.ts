@@ -34,21 +34,13 @@ async function unregisterAppWorkers() {
 export function registerOfflineSupport() {
   if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
 
-  const refused =
-    !import.meta.env.PROD ||
-    window.self !== window.top ||
-    isPreviewHost(window.location.hostname) ||
-    new URLSearchParams(window.location.search).has("sw") === false
-      ? false
-      : false;
-
   const killSwitch = new URLSearchParams(window.location.search).get("sw") === "off";
   const blocked =
     !import.meta.env.PROD ||
     window.self !== window.top ||
     isPreviewHost(window.location.hostname) ||
-    killSwitch ||
-    refused;
+    killSwitch;
+
 
   if (blocked) {
     void unregisterAppWorkers();
