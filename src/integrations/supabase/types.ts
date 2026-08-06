@@ -74,6 +74,87 @@ export type Database = {
         }
         Relationships: []
       }
+      calendar_feeds: {
+        Row: {
+          created_at: string
+          id: string
+          token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          token: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      code_files: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          language: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          id?: string
+          language?: string
+          name?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          language?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      data_imports: {
+        Row: {
+          created_at: string
+          file_name: string | null
+          id: string
+          kind: string
+          rows_imported: number
+          summary: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_name?: string | null
+          id?: string
+          kind: string
+          rows_imported?: number
+          summary?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string | null
+          id?: string
+          kind?: string
+          rows_imported?: number
+          summary?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       diet_plans: {
         Row: {
           calorie_target: number

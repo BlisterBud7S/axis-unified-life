@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as AuthenticatedAiRouteImport } from './routes/_authenticated/ai'
+import { Route as AuthenticatedCodeRouteImport } from './routes/_authenticated/code'
 import { Route as AuthenticatedFinanceRouteImport } from './routes/_authenticated/finance'
 import { Route as AuthenticatedHealthRouteImport } from './routes/_authenticated/health'
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
@@ -20,8 +21,10 @@ import { Route as AuthenticatedLifeRouteImport } from './routes/_authenticated/l
 import { Route as AuthenticatedPlansRouteImport } from './routes/_authenticated/plans'
 import { Route as AuthenticatedSchoolRouteImport } from './routes/_authenticated/school'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedSyncRouteImport } from './routes/_authenticated/sync'
 import { Route as AuthLoginRouteImport } from './routes/auth.login'
 import { Route as AuthSignupRouteImport } from './routes/auth.signup'
+import { Route as ApiPublicCalendarTokenRouteImport } from './routes/api/public/calendar.$token'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -40,6 +43,11 @@ const OnboardingRoute = OnboardingRouteImport.update({
 const AuthenticatedAiRoute = AuthenticatedAiRouteImport.update({
   id: '/ai',
   path: '/ai',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedCodeRoute = AuthenticatedCodeRouteImport.update({
+  id: '/code',
+  path: '/code',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedFinanceRoute = AuthenticatedFinanceRouteImport.update({
@@ -77,6 +85,11 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSyncRoute = AuthenticatedSyncRouteImport.update({
+  id: '/sync',
+  path: '/sync',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/auth/login',
   path: '/auth/login',
@@ -87,11 +100,17 @@ const AuthSignupRoute = AuthSignupRouteImport.update({
   path: '/auth/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCalendarTokenRoute = ApiPublicCalendarTokenRouteImport.update({
+  id: '/api/public/calendar/$token',
+  path: '/api/public/calendar/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/onboarding': typeof OnboardingRoute
   '/ai': typeof AuthenticatedAiRoute
+  '/code': typeof AuthenticatedCodeRoute
   '/finance': typeof AuthenticatedFinanceRoute
   '/health': typeof AuthenticatedHealthRoute
   '/home': typeof AuthenticatedHomeRoute
@@ -99,13 +118,16 @@ export interface FileRoutesByFullPath {
   '/plans': typeof AuthenticatedPlansRoute
   '/school': typeof AuthenticatedSchoolRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/sync': typeof AuthenticatedSyncRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
+  '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/onboarding': typeof OnboardingRoute
   '/ai': typeof AuthenticatedAiRoute
+  '/code': typeof AuthenticatedCodeRoute
   '/finance': typeof AuthenticatedFinanceRoute
   '/health': typeof AuthenticatedHealthRoute
   '/home': typeof AuthenticatedHomeRoute
@@ -113,8 +135,10 @@ export interface FileRoutesByTo {
   '/plans': typeof AuthenticatedPlansRoute
   '/school': typeof AuthenticatedSchoolRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/sync': typeof AuthenticatedSyncRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
+  '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -122,6 +146,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/onboarding': typeof OnboardingRoute
   '/_authenticated/ai': typeof AuthenticatedAiRoute
+  '/_authenticated/code': typeof AuthenticatedCodeRoute
   '/_authenticated/finance': typeof AuthenticatedFinanceRoute
   '/_authenticated/health': typeof AuthenticatedHealthRoute
   '/_authenticated/home': typeof AuthenticatedHomeRoute
@@ -129,8 +154,10 @@ export interface FileRoutesById {
   '/_authenticated/plans': typeof AuthenticatedPlansRoute
   '/_authenticated/school': typeof AuthenticatedSchoolRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/sync': typeof AuthenticatedSyncRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
+  '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -138,6 +165,7 @@ export interface FileRouteTypes {
     | '/'
     | '/onboarding'
     | '/ai'
+    | '/code'
     | '/finance'
     | '/health'
     | '/home'
@@ -145,13 +173,16 @@ export interface FileRouteTypes {
     | '/plans'
     | '/school'
     | '/settings'
+    | '/sync'
     | '/auth/login'
     | '/auth/signup'
+    | '/api/public/calendar/$token'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/onboarding'
     | '/ai'
+    | '/code'
     | '/finance'
     | '/health'
     | '/home'
@@ -159,14 +190,17 @@ export interface FileRouteTypes {
     | '/plans'
     | '/school'
     | '/settings'
+    | '/sync'
     | '/auth/login'
     | '/auth/signup'
+    | '/api/public/calendar/$token'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/onboarding'
     | '/_authenticated/ai'
+    | '/_authenticated/code'
     | '/_authenticated/finance'
     | '/_authenticated/health'
     | '/_authenticated/home'
@@ -174,8 +208,10 @@ export interface FileRouteTypes {
     | '/_authenticated/plans'
     | '/_authenticated/school'
     | '/_authenticated/settings'
+    | '/_authenticated/sync'
     | '/auth/login'
     | '/auth/signup'
+    | '/api/public/calendar/$token'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -184,6 +220,7 @@ export interface RootRouteChildren {
   OnboardingRoute: typeof OnboardingRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthSignupRoute: typeof AuthSignupRoute
+  ApiPublicCalendarTokenRoute: typeof ApiPublicCalendarTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -214,6 +251,13 @@ declare module '@tanstack/react-router' {
       path: '/ai'
       fullPath: '/ai'
       preLoaderRoute: typeof AuthenticatedAiRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/code': {
+      id: '/_authenticated/code'
+      path: '/code'
+      fullPath: '/code'
+      preLoaderRoute: typeof AuthenticatedCodeRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/finance': {
@@ -265,6 +309,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/sync': {
+      id: '/_authenticated/sync'
+      path: '/sync'
+      fullPath: '/sync'
+      preLoaderRoute: typeof AuthenticatedSyncRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/auth/login': {
       id: '/auth/login'
       path: '/auth/login'
@@ -279,11 +330,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/calendar/$token': {
+      id: '/api/public/calendar/$token'
+      path: '/api/public/calendar/$token'
+      fullPath: '/api/public/calendar/$token'
+      preLoaderRoute: typeof ApiPublicCalendarTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAiRoute: typeof AuthenticatedAiRoute
+  AuthenticatedCodeRoute: typeof AuthenticatedCodeRoute
   AuthenticatedFinanceRoute: typeof AuthenticatedFinanceRoute
   AuthenticatedHealthRoute: typeof AuthenticatedHealthRoute
   AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
@@ -291,10 +350,12 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPlansRoute: typeof AuthenticatedPlansRoute
   AuthenticatedSchoolRoute: typeof AuthenticatedSchoolRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedSyncRoute: typeof AuthenticatedSyncRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAiRoute: AuthenticatedAiRoute,
+  AuthenticatedCodeRoute: AuthenticatedCodeRoute,
   AuthenticatedFinanceRoute: AuthenticatedFinanceRoute,
   AuthenticatedHealthRoute: AuthenticatedHealthRoute,
   AuthenticatedHomeRoute: AuthenticatedHomeRoute,
@@ -302,6 +363,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPlansRoute: AuthenticatedPlansRoute,
   AuthenticatedSchoolRoute: AuthenticatedSchoolRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedSyncRoute: AuthenticatedSyncRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -313,17 +375,8 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRoute: OnboardingRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthSignupRoute: AuthSignupRoute,
+  ApiPublicCalendarTokenRoute: ApiPublicCalendarTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

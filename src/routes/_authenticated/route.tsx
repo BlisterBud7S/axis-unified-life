@@ -15,6 +15,8 @@ import {
   Settings,
   Sparkles,
   Wallet,
+  Code2,
+  RefreshCw,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -36,6 +38,8 @@ const NAV = [
   { to: "/health", label: "Health", icon: HeartPulse },
   { to: "/school", label: "School", icon: GraduationCap },
   { to: "/ai", label: "AI Hub", icon: Bot },
+  { to: "/code", label: "AXIS Code", icon: Code2 },
+  { to: "/sync", label: "Sync", icon: RefreshCw },
   { to: "/plans", label: "Plans", icon: Sparkles },
   { to: "/settings", label: "Settings", icon: Settings },
 

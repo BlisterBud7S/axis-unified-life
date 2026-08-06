@@ -1,3 +1,4 @@
+import { AffordCheck } from "@/components/axis/AffordCheck";
 import { Button } from "@/components/axis/Button";
 import { Card, CardTitle } from "@/components/axis/Card";
 import { Header } from "@/components/axis/Header";
@@ -208,6 +209,12 @@ function FinancePage() {
           hint={stats.pie[0] ? formatMoney(stats.pie[0].value, country) : "Log an expense"}
         />
       </div>
+
+      <div className="mt-5">
+        <AffordCheck />
+      </div>
+
+
 
       <div className="mt-5 grid gap-5 lg:grid-cols-2">
         <Card>
