@@ -1,3 +1,4 @@
+import { AffordCheck } from "@/components/axis/AffordCheck";
 import { Button } from "@/components/axis/Button";
 import { Card, CardTitle } from "@/components/axis/Card";
 import { Header } from "@/components/axis/Header";
