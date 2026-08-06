@@ -19,6 +19,9 @@ export default defineConfig({
         strategies: "generateSW",
         registerType: "autoUpdate",
         filename: "sw.js",
+        // The browser-served output lives in dist/client; sw.js must land there.
+        outDir: "dist/client",
+
         injectRegister: null,
         devOptions: { enabled: false },
         manifest: false,
