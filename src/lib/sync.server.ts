@@ -35,10 +35,10 @@ export async function getOrCreateFeed(supabase: Client, userId: string, reset = 
 
 export type HealthDay = {
   date: string;
-  sleep_hours?: number | null;
-  steps?: number | null;
-  workout_type?: string | null;
-  workout_duration?: number | null;
+  sleep_hours?: number | null | undefined;
+  steps?: number | null | undefined;
+  workout_type?: string | null | undefined;
+  workout_duration?: number | null | undefined;
 };
 
 export async function importHealth(
