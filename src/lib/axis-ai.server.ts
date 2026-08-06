@@ -15,7 +15,7 @@ export async function resolveAccess(
   supabase: Client,
   userId: string,
   modelId: string,
-  need?: "mealScan" | "schoolPath",
+  need?: "mealScan" | "schoolPath" | "codeMode" | "affordability" | "statementImport",
 ) {
   const { data: profile, error } = await supabase
     .from("users")
@@ -28,11 +28,14 @@ export async function resolveAccess(
   const config = tierConfig(tier);
 
   if (need && !config[need]) {
-    throw new Error(
-      need === "mealScan"
-        ? "Meal photo scanning is a Plus feature. Upgrade your plan to use it."
-        : "AI admission roadmaps are a Pro feature. Upgrade your plan to use it.",
-    );
+    const messages: Record<string, string> = {
+      mealScan: "Meal photo scanning is a Plus feature. Upgrade your plan to use it.",
+      schoolPath: "AI admission roadmaps are a Pro feature. Upgrade your plan to use it.",
+      codeMode: "AXIS Code is a Plus feature. Upgrade your plan to use it.",
+      affordability: "The affordability engine is a Plus feature. Upgrade your plan to use it.",
+      statementImport: "Bank statement import is a Pro feature. Upgrade your plan to use it.",
+    };
+    throw new Error(messages[need] ?? "That feature needs a higher plan.");
   }
 
   const model = modelById(modelId) ?? modelById("axis-swift")!;

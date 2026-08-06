@@ -66,6 +66,9 @@ export type Tier = {
   mealScan: boolean;
   schoolPath: boolean;
   lifeContext: boolean;
+  codeMode: boolean;
+  affordability: boolean;
+  statementImport: boolean;
 };
 
 export const TIERS: Tier[] = [
@@ -80,10 +83,19 @@ export const TIERS: Tier[] = [
       "AXIS Swift engine",
       "15 AI messages a day",
     ],
-    locked: ["Meal photo scanning", "AI admission roadmaps", "Personal context in AI answers"],
+    locked: [
+      "Meal photo scanning",
+      "AI admission roadmaps",
+      "AXIS Code canvas",
+      "Can I afford it? engine",
+      "Bank statement import",
+    ],
     mealScan: false,
     schoolPath: false,
     lifeContext: false,
+    codeMode: false,
+    affordability: false,
+    statementImport: false,
   },
   {
     id: "plus",
@@ -97,11 +109,16 @@ export const TIERS: Tier[] = [
       "150 AI messages a day",
       "Meal photo scanning with calorie estimates",
       "Personal context in AI answers",
+      "AXIS Code canvas — coding chat with saved files",
+      "Can I afford it? — AI verdicts on your real money",
     ],
-    locked: ["AI admission roadmaps", "AXIS Prime engine"],
+    locked: ["AI admission roadmaps", "Bank statement import", "AXIS Prime engine"],
     mealScan: true,
     schoolPath: false,
     lifeContext: true,
+    codeMode: true,
+    affordability: true,
+    statementImport: false,
   },
   {
     id: "pro",
@@ -113,12 +130,16 @@ export const TIERS: Tier[] = [
       "Everything in Plus",
       "AXIS Prime — deepest reasoning engine",
       "AI admission roadmaps per target school",
+      "Bank statement import — upload a statement, AXIS logs every transaction",
       "600 AI messages a day",
     ],
     locked: ["AXIS Oracle engine", "Unlimited messages"],
     mealScan: true,
     schoolPath: true,
     lifeContext: true,
+    codeMode: true,
+    affordability: true,
+    statementImport: true,
   },
   {
     id: "elite",
@@ -136,6 +157,9 @@ export const TIERS: Tier[] = [
     mealScan: true,
     schoolPath: true,
     lifeContext: true,
+    codeMode: true,
+    affordability: true,
+    statementImport: true,
   },
 ];
 
