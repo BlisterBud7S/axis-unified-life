@@ -210,6 +210,12 @@ function FinancePage() {
         />
       </div>
 
+      <div className="mt-5">
+        <AffordCheck />
+      </div>
+
+
+
       <div className="mt-5 grid gap-5 lg:grid-cols-2">
         <Card>
           <CardTitle>Six-month trend</CardTitle>
