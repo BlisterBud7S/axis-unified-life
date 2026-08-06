@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import {
   Outlet,
   Link,
@@ -13,6 +13,9 @@ import { Toaster } from "sonner";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthProvider } from "../lib/auth";
+import { OfflineCacheProvider } from "../lib/offline-cache";
+import { OfflineBanner } from "../components/axis/OfflineBanner";
+import { registerOfflineSupport } from "../lib/offline";
 
 
 function NotFoundComponent() {
@@ -87,6 +90,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "AXIS unifies tasks, finance, health, school applications and AI assistance in one dark, focused dashboard.",
       },
       { name: "author", content: "AXIS" },
+      { name: "theme-color", content: "#0A0F1E" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "apple-mobile-web-app-title", content: "AXIS" },
       { property: "og:title", content: "AXIS — Your personal life operating system" },
       {
         property: "og:description",
@@ -101,7 +108,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/favicon.png", type: "image/png" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "apple-touch-icon", href: "/axis-icon-192.png" },
     ],
   }),
   shellComponent: RootShell,
@@ -127,14 +136,19 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
+  useEffect(() => {
+    registerOfflineSupport();
+  }, []);
+
   return (
-    <QueryClientProvider client={queryClient}>
+    <OfflineCacheProvider client={queryClient}>
       <AuthProvider>
+        <OfflineBanner />
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />
         <Toaster theme="dark" position="top-right" richColors />
       </AuthProvider>
-    </QueryClientProvider>
+    </OfflineCacheProvider>
   );
 }
 
