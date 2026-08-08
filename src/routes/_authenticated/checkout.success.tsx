@@ -25,7 +25,7 @@ export const Route = createFileRoute("/_authenticated/checkout/success")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: SuccessPage;
+  component: SuccessPage,
 });
 
 function SuccessPage() {
