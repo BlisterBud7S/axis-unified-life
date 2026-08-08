@@ -1,4 +1,5 @@
 import { FloatingAI } from "@/components/axis/FloatingAI";
+import { PaymentTestModeBanner } from "@/components/axis/PaymentTestModeBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useProfile } from "@/lib/auth";
 import { cn } from "@/lib/utils";
@@ -109,6 +110,7 @@ function Shell() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
+        <PaymentTestModeBanner />
         <div className="flex items-center gap-3 border-b border-border p-3 lg:hidden">
           <button onClick={() => setOpen((v) => !v)} className="text-muted-foreground">
             <Menu className="h-5 w-5" />

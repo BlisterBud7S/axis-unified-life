@@ -1,11 +1,15 @@
 import { Button } from "@/components/axis/Button";
 import { Card, CardTitle } from "@/components/axis/Card";
 import { Header } from "@/components/axis/Header";
-import { useProfile } from "@/lib/auth";
-import { TIERS, effectiveTier, tierRank } from "@/lib/tiers";
+import { usePaddleCheckout } from "@/hooks/usePaddleCheckout";
+import { useAuth, useProfile } from "@/lib/auth";
+import { PRICE_IDS, yearlyPrice, type BillingCycle } from "@/lib/paddle";
+import { createBillingPortalUrl } from "@/lib/payments.functions";
+import { TIERS, effectiveTier, tierRank, type TierId } from "@/lib/tiers";
 import { cn } from "@/lib/utils";
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, Lock } from "lucide-react";
+import { Check, Loader2, Lock } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/plans")({
@@ -31,15 +35,63 @@ export const Route = createFileRoute("/_authenticated/plans")({
 
 function PlansPage() {
   const { data: profile } = useProfile();
+  const { user } = useAuth();
   const current = effectiveTier(profile);
+  const [cycle, setCycle] = useState<BillingCycle>("monthly");
+  const [portalLoading, setPortalLoading] = useState(false);
+  const { openCheckout, loadingPriceId } = usePaddleCheckout();
+
+  async function openPortal() {
+    setPortalLoading(true);
+    try {
+      const { url } = await createBillingPortalUrl();
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      toast.error(
+        e instanceof Error && !/Unauthorized/.test(e.message)
+          ? e.message
+          : "No billing history on this account yet",
+      );
+    } finally {
+      setPortalLoading(false);
+    }
+  }
+
+  function buy(tier: TierId) {
+    if (tier === "free") return;
+    if (!user) return;
+    const priceId = PRICE_IDS[tier as Exclude<TierId, "free">][cycle];
+    openCheckout({ priceId, userId: user.id, customerEmail: user.email });
+  }
 
   return (
     <>
       <Header title="Plans" subtitle="Pick how much AXIS brain you want" />
+
+      <div className="mb-5 inline-flex rounded-full border border-border bg-card/60 p-1">
+        {(["monthly", "yearly"] as const).map((c) => (
+          <button
+            key={c}
+            onClick={() => setCycle(c)}
+            className={cn(
+              "rounded-full px-4 py-1.5 text-xs font-medium transition-colors",
+              cycle === c ? "bg-primary text-primary-foreground" : "text-muted-foreground",
+            )}
+          >
+            {c === "monthly" ? "Monthly" : "Yearly — 2 months free"}
+          </button>
+        ))}
+      </div>
+
       <div className="grid gap-4 lg:grid-cols-4">
         {TIERS.map((t) => {
           const isCurrent = t.id === current;
           const isUpgrade = tierRank(t.id) > tierRank(current);
+          const paid = t.priceMonthly > 0;
+          const amount = cycle === "yearly" ? yearlyPrice(t.priceMonthly) : t.priceMonthly;
+          const priceId = paid ? PRICE_IDS[t.id as Exclude<TierId, "free">][cycle] : null;
+          const busy = !!priceId && loadingPriceId === priceId;
+
           return (
             <Card key={t.id} glow={t.id === "pro"} className={cn(isCurrent && "border-primary/60")}>
               <CardTitle>
@@ -47,11 +99,16 @@ function PlansPage() {
                 {isCurrent ? <span className="ml-2 text-xs text-primary">current</span> : null}
               </CardTitle>
               <p className="text-2xl font-semibold text-foreground">
-                {t.priceMonthly === 0 ? "Free" : `$${t.priceMonthly}`}
-                {t.priceMonthly > 0 ? (
-                  <span className="text-sm font-normal text-muted-foreground">/mo</span>
+                {paid ? `$${amount}` : "Free"}
+                {paid ? (
+                  <span className="text-sm font-normal text-muted-foreground">
+                    /{cycle === "yearly" ? "yr" : "mo"}
+                  </span>
                 ) : null}
               </p>
+              {paid && cycle === "yearly" ? (
+                <p className="text-xs text-success">${t.priceMonthly * 2} saved a year</p>
+              ) : null}
               <p className="mt-1 mb-3 text-xs text-muted-foreground">{t.blurb}</p>
 
               <ul className="space-y-1.5">
@@ -69,28 +126,42 @@ function PlansPage() {
                 ))}
               </ul>
 
-              <Button
-                className="mt-4 w-full"
-                variant={t.id === "pro" ? "primary" : "outline"}
-                disabled={isCurrent}
-                onClick={() =>
-                  toast.info(
-                    isUpgrade
-                      ? "Checkout isn't connected yet — say the word and I'll wire up payments so this button charges and upgrades you."
-                      : "Downgrades will be handled by the billing portal once payments are connected.",
-                  )
-                }
-              >
-                {isCurrent ? "Your plan" : isUpgrade ? `Upgrade to ${t.name}` : `Switch to ${t.name}`}
-              </Button>
+              {paid ? (
+                <Button
+                  className="mt-4 w-full"
+                  variant={t.id === "pro" ? "primary" : "outline"}
+                  disabled={isCurrent || busy}
+                  onClick={() => buy(t.id)}
+                >
+                  {busy ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : isCurrent ? (
+                    "Your plan"
+                  ) : isUpgrade ? (
+                    `Upgrade to ${t.name}`
+                  ) : (
+                    `Switch to ${t.name}`
+                  )}
+                </Button>
+              ) : (
+                <Button className="mt-4 w-full" variant="ghost" disabled>
+                  {isCurrent ? "Your plan" : "Always included"}
+                </Button>
+              )}
             </Card>
           );
         })}
       </div>
-      <p className="mt-4 text-xs text-muted-foreground">
-        Payments aren't connected yet, so plan changes can't be charged. Everything else — engine
-        gating, daily limits and feature locks — is live and reads your real subscription record.
-      </p>
+
+      <div className="mt-5 flex flex-wrap items-center gap-3">
+        <Button variant="secondary" onClick={openPortal} disabled={portalLoading}>
+          {portalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Manage billing"}
+        </Button>
+        <p className="text-xs text-muted-foreground">
+          Upgrades start right away and are prorated. Downgrades and cancellations take effect at the
+          end of your paid period — you keep every feature until then.
+        </p>
+      </div>
     </>
   );
 }
