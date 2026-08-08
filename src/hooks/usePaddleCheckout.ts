@@ -9,8 +9,8 @@ export function usePaddleCheckout() {
   async function openCheckout(options: {
     priceId: string;
     userId: string;
-    customerEmail?: string | null;
-    successUrl?: string;
+    customerEmail?: string | null | undefined;
+    successUrl?: string | undefined;
   }) {
     setLoadingPriceId(options.priceId);
     try {
