@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.protect_billing_columns() FROM PUBLIC, anon, authenticated;
