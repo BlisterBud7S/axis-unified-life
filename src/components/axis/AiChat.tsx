@@ -254,6 +254,28 @@ export function AiChat({
                 {m.role === "user" ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
               </div>
               <div className="min-w-0 flex-1 text-sm leading-relaxed text-foreground">
+                {m.attachments?.length ? (
+                  <div className="mb-1.5 flex flex-wrap gap-2">
+                    {m.attachments.map((a, j) =>
+                      a.previewUrl ? (
+                        <img
+                          key={j}
+                          src={a.previewUrl}
+                          alt={a.name}
+                          className="h-16 w-16 rounded-lg border border-border object-cover"
+                        />
+                      ) : (
+                        <span
+                          key={j}
+                          className="flex max-w-[180px] items-center gap-1.5 rounded-lg border border-border bg-secondary/40 px-2 py-1 text-xs text-muted-foreground"
+                        >
+                          <FileText className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{a.name}</span>
+                        </span>
+                      ),
+                    )}
+                  </div>
+                ) : null}
                 <div className="prose prose-invert prose-sm max-w-none prose-p:my-1.5 prose-ul:my-1.5 prose-headings:mt-3 prose-headings:mb-1">
                   <ReactMarkdown>{m.content}</ReactMarkdown>
                 </div>
@@ -267,10 +289,37 @@ export function AiChat({
         <div ref={endRef} />
       </div>
 
+      {error ? <p className="mt-2 text-xs text-destructive">{error}</p> : null}
       {error && /plan|Upgrade|upgrade/.test(error) ? (
         <Link to="/plans" className="mt-2 text-xs text-primary hover:underline">
           See plans and upgrade →
         </Link>
+      ) : null}
+
+      {pending.length ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {pending.map((a, i) => (
+            <div
+              key={i}
+              className="relative flex max-w-[190px] items-center gap-1.5 rounded-lg border border-border bg-secondary/40 py-1 pl-1.5 pr-6 text-xs text-muted-foreground"
+            >
+              {a.kind === "image" ? (
+                <img src={a.dataUrl} alt={a.name} className="h-6 w-6 rounded object-cover" />
+              ) : (
+                <FileText className="h-3.5 w-3.5 shrink-0" />
+              )}
+              <span className="truncate">{a.name}</span>
+              <button
+                type="button"
+                aria-label={`Remove ${a.name}`}
+                onClick={() => setPending((p) => p.filter((_, j) => j !== i))}
+                className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
       ) : null}
 
       <form
@@ -280,16 +329,52 @@ export function AiChat({
           submit(draft);
         }}
       >
+        <input
+          ref={fileRef}
+          type="file"
+          multiple
+          accept="image/*,application/pdf,text/*,.md,.csv,.json,.yml,.yaml,.ics,.log"
+          className="hidden"
+          onChange={(e) => {
+            void addFiles(e.target.files);
+            e.target.value = "";
+          }}
+        />
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          aria-label="Attach images or files"
+          title="Attach images, PDFs or text files"
+          onClick={() => fileRef.current?.click()}
+          disabled={send.isPending || pending.length >= MAX_FILES}
+        >
+          <Paperclip className="h-4 w-4" />
+        </Button>
         <Input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder="Ask AXIS…"
+          placeholder={pending.length ? "Ask about the attachments…" : "Ask AXIS…"}
           aria-label="Message AXIS"
+          onPaste={(e) => {
+            const files = Array.from(e.clipboardData.files);
+            if (files.length) {
+              e.preventDefault();
+              const dt = new DataTransfer();
+              files.forEach((f) => dt.items.add(f));
+              void addFiles(dt.files);
+            }
+          }}
         />
-        <Button type="submit" size="icon" disabled={send.isPending || !draft.trim()}>
+        <Button
+          type="submit"
+          size="icon"
+          disabled={send.isPending || (!draft.trim() && pending.length === 0)}
+        >
           <Send className="h-4 w-4" />
         </Button>
       </form>
     </div>
   );
 }
+
