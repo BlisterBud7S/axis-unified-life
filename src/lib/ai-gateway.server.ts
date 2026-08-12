@@ -2,10 +2,13 @@ const GATEWAY = "https://ai.gateway.lovable.dev/v1";
 
 export type TextPart = { type: "input_text"; text: string };
 export type ImagePart = { type: "input_image"; image_url: string };
+export type FilePart = { type: "input_file"; filename: string; file_data: string };
+export type ContentPart = TextPart | ImagePart | FilePart;
 export type AxisMessage = {
   role: "system" | "user" | "assistant";
-  content: string | Array<TextPart | ImagePart>;
+  content: string | ContentPart[];
 };
+
 
 type JsonSchema = { name: string; schema: Record<string, unknown> };
 
