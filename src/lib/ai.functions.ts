@@ -58,6 +58,8 @@ export const axisChat = createServerFn({ method: "POST" })
       message: data.message,
       useContext: data.useContext,
       source: data.source,
+      attachments: data.attachments,
+
     });
   });
 
