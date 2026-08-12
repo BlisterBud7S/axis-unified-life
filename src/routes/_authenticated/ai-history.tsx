@@ -10,7 +10,7 @@ import { Bot, ChevronDown, MessageSquare, User } from "lucide-react";
 import { useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 
-export const Route = createFileRoute("/_authenticated/ai/history")({
+export const Route = createFileRoute("/_authenticated/ai-history")({
   head: () => ({
     meta: [
       { title: "AI chat history — AXIS" },
