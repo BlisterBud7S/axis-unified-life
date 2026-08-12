@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { effectiveTier, modelById, tierConfig, canUseModel, type TierId } from "@/lib/tiers";
-import { runModel, parseJson, type AxisMessage } from "@/lib/ai-gateway.server";
+import { runModel, parseJson, type AxisMessage, type ContentPart } from "@/lib/ai-gateway.server";
 
 export type Client = SupabaseClient<Database>;
 
