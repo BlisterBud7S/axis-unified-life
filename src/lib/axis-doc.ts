@@ -129,6 +129,7 @@ export async function downloadDocPdf(spec: DocSpec) {
   // ---- Sections
   for (const section of spec.sections) {
     room(56);
+    if (y > M + 24) y += 8;
     if (section.heading) {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(13);
