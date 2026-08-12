@@ -90,8 +90,10 @@ export function AiChat({
   const [useContext, setUseContext] = useState(config.lifeContext);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
+  const [pending, setPending] = useState<ChatAttachment[]>([]);
   const [error, setError] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!allowed.some((m) => m.id === modelId)) {
@@ -109,10 +111,17 @@ export function AiChat({
 
   const chatFn = useServerFn(axisChat);
   const send = useMutation({
-    mutationFn: async (message: string) => {
-      const history = messages;
+    mutationFn: async (input: { message: string; attachments: ChatAttachment[] }) => {
+      const history = messages.map((m) => ({ role: m.role, content: m.content }));
       const res = await chatFn({
-        data: { message, modelId, useContext, source, history },
+        data: {
+          message: input.message,
+          modelId,
+          useContext,
+          source,
+          history,
+          attachments: input.attachments,
+        },
       });
       return res;
     },
@@ -129,14 +138,43 @@ export function AiChat({
     },
   });
 
-  function submit(text: string) {
-    const message = text.trim();
+  async function addFiles(files: FileList | null) {
+    if (!files?.length) return;
+    setError(null);
+    const room = MAX_FILES - pending.length;
+    const next: ChatAttachment[] = [];
+    for (const file of Array.from(files).slice(0, Math.max(room, 0))) {
+      try {
+        next.push(await toAttachment(file));
+      } catch (e) {
+        setError((e as Error).message);
+      }
+    }
+    if (files.length > room) setError(`You can attach up to ${MAX_FILES} files per message.`);
+    if (next.length) setPending((p) => [...p, ...next]);
+  }
+
+  function submit(text: string, attachments: ChatAttachment[] = pending) {
+    const message = text.trim() || (attachments.length ? "Have a look at this." : "");
     if (!message || send.isPending) return;
     setError(null);
-    setMessages((m) => [...m, { role: "user", content: message }]);
+    setMessages((m) => [
+      ...m,
+      {
+        role: "user",
+        content: message,
+        attachments: attachments.map((a) => ({
+          kind: a.kind,
+          name: a.name,
+          ...(a.kind === "image" ? { previewUrl: a.dataUrl } : {}),
+        })),
+      },
+    ]);
     setDraft("");
-    send.mutate(message);
+    setPending([]);
+    send.mutate({ message, attachments });
   }
+
 
   const active = modelById(modelId);
 
