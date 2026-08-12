@@ -1,6 +1,7 @@
 import { Button } from "@/components/axis/Button";
 import { Input } from "@/components/axis/Field";
-import { axisChat } from "@/lib/ai.functions";
+import { axisChat, axisDocument } from "@/lib/ai.functions";
+import { downloadDocPdf, type DocSpec } from "@/lib/axis-doc";
 import { useProfile } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import {
@@ -14,7 +15,7 @@ import {
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
-import { Bot, FileText, Paperclip, Send, Sparkles, User, X } from "lucide-react";
+import { Bot, Download, FileText, FileType2, Paperclip, Send, Sparkles, User, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 
@@ -27,6 +28,7 @@ export type ChatMessage = {
   role: "user" | "assistant";
   content: string;
   attachments?: Array<{ kind: ChatAttachment["kind"]; name: string; previewUrl?: string }>;
+  doc?: DocSpec;
 };
 
 const MAX_FILES = 5;
@@ -92,6 +94,7 @@ export function AiChat({
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState<ChatAttachment[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [docMode, setDocMode] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -138,6 +141,38 @@ export function AiChat({
     },
   });
 
+  const docFn = useServerFn(axisDocument);
+  const makeDoc = useMutation({
+    mutationFn: async (input: { message: string; attachments: ChatAttachment[] }) =>
+      docFn({
+        data: {
+          prompt: input.message,
+          modelId,
+          useContext,
+          source,
+          attachments: input.attachments,
+        },
+      }),
+    onSuccess: (res) => {
+      setMessages((m) => [
+        ...m,
+        {
+          role: "assistant",
+          content: `**${res.spec.title}**\n\n${res.spec.summary}`,
+          doc: res.spec,
+        },
+      ]);
+      qc.invalidateQueries({ queryKey: ["ai_chat_logs"] });
+      void downloadDocPdf(res.spec);
+    },
+    onError: (e: Error) => {
+      setError(e.message);
+      setMessages((m) => [...m, { role: "assistant", content: `\u26a0\ufe0f ${e.message}` }]);
+    },
+  });
+
+  const busy = send.isPending || makeDoc.isPending;
+
   async function addFiles(files: FileList | null) {
     if (!files?.length) return;
     setError(null);
@@ -156,7 +191,7 @@ export function AiChat({
 
   function submit(text: string, attachments: ChatAttachment[] = pending) {
     const message = text.trim() || (attachments.length ? "Have a look at this." : "");
-    if (!message || send.isPending) return;
+    if (!message || busy) return;
     setError(null);
     setMessages((m) => [
       ...m,
@@ -172,7 +207,8 @@ export function AiChat({
     ]);
     setDraft("");
     setPending([]);
-    send.mutate({ message, attachments });
+    if (docMode) makeDoc.mutate({ message, attachments });
+    else send.mutate({ message, attachments });
   }
 
 
@@ -211,6 +247,18 @@ export function AiChat({
           }
         >
           <Sparkles className="h-3.5 w-3.5" /> My data
+        </button>
+        <button
+          onClick={() => setDocMode((v) => !v)}
+          className={cn(
+            "flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs transition-colors",
+            docMode
+              ? "border-primary bg-primary/15 text-primary"
+              : "border-border text-muted-foreground hover:text-foreground",
+          )}
+          title="Turn the answer into a designed PDF document"
+        >
+          <FileType2 className="h-3.5 w-3.5" /> PDF mode
         </button>
         <span className="text-xs text-muted-foreground">
           {config.name} plan ·{" "}
@@ -279,12 +327,28 @@ export function AiChat({
                 <div className="prose prose-invert prose-sm max-w-none prose-p:my-1.5 prose-ul:my-1.5 prose-headings:mt-3 prose-headings:mb-1">
                   <ReactMarkdown>{m.content}</ReactMarkdown>
                 </div>
+                {m.doc ? (
+                  <div className="mt-2 flex items-center gap-3 rounded-xl border border-primary/40 bg-primary/10 p-3">
+                    <FileType2 className="h-5 w-5 shrink-0 text-primary" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-foreground">{m.doc.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {m.doc.sections.length} sections · designed PDF
+                      </p>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => void downloadDocPdf(m.doc!)}>
+                      <Download className="h-3.5 w-3.5" /> Download
+                    </Button>
+                  </div>
+                ) : null}
               </div>
             </div>
           ))
         )}
-        {send.isPending ? (
-          <p className="px-2 text-xs text-muted-foreground">{active?.name} is thinking…</p>
+        {busy ? (
+          <p className="px-2 text-xs text-muted-foreground">
+            {active?.name} is {makeDoc.isPending ? "designing your PDF" : "thinking"}…
+          </p>
         ) : null}
         <div ref={endRef} />
       </div>
@@ -347,14 +411,20 @@ export function AiChat({
           aria-label="Attach images or files"
           title="Attach images, PDFs or text files"
           onClick={() => fileRef.current?.click()}
-          disabled={send.isPending || pending.length >= MAX_FILES}
+          disabled={busy || pending.length >= MAX_FILES}
         >
           <Paperclip className="h-4 w-4" />
         </Button>
         <Input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder={pending.length ? "Ask about the attachments…" : "Ask AXIS…"}
+          placeholder={
+            docMode
+              ? "Describe the PDF you want…"
+              : pending.length
+                ? "Ask about the attachments…"
+                : "Ask AXIS…"
+          }
           aria-label="Message AXIS"
           onPaste={(e) => {
             const files = Array.from(e.clipboardData.files);
@@ -369,7 +439,7 @@ export function AiChat({
         <Button
           type="submit"
           size="icon"
-          disabled={send.isPending || (!draft.trim() && pending.length === 0)}
+          disabled={busy || (!draft.trim() && pending.length === 0)}
         >
           <Send className="h-4 w-4" />
         </Button>
