@@ -360,3 +360,108 @@ export async function schoolPlan(opts: {
 
   return { plan, addedItems: fresh.length };
 }
+
+const DOC_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["title", "subtitle", "summary", "sections", "footer"],
+  properties: {
+    title: { type: "string" },
+    subtitle: { type: "string" },
+    summary: { type: "string" },
+    footer: { type: "string" },
+    sections: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["heading", "kind", "lines"],
+        properties: {
+          heading: { type: "string" },
+          kind: {
+            type: "string",
+            enum: ["paragraphs", "bullets", "numbered", "keyvalue", "callout", "table"],
+          },
+          lines: { type: "array", items: { type: "string" } },
+        },
+      },
+    },
+  },
+} as const;
+
+export type DocSpec = {
+  title: string;
+  subtitle: string;
+  summary: string;
+  footer: string;
+  sections: Array<{
+    heading: string;
+    kind: "paragraphs" | "bullets" | "numbered" | "keyvalue" | "callout" | "table";
+    lines: string[];
+  }>;
+};
+
+const DOC_SYSTEM = `You are AXIS Docs, a designer-writer that produces beautiful, print-ready documents.
+Return a structured document, never raw markdown.
+Rules:
+- Title is short and specific. Subtitle is one line of context (audience, date range or purpose).
+- summary is 2-4 sentences that stand alone.
+- 3-7 sections, each with a clear heading and the section kind that fits the content:
+  paragraphs (prose), bullets (unordered points), numbered (steps), keyvalue ("Label | Value" rows),
+  table (first row is the header, cells separated by "|", 2-4 columns, consistent column count), callout (one short emphasised note).
+- Keep lines self-contained; no markdown syntax (**, #, -) inside lines, no emojis.
+- Never invent facts about the user; if data is missing, say what is needed.
+- footer is a single short line, e.g. a caveat or generation note.`;
+
+/** Generate a structured, print-ready document spec from a prompt. */
+export async function makeDocument(opts: {
+  supabase: Client;
+  userId: string;
+  modelId: string;
+  prompt: string;
+  useContext: boolean;
+  source: string;
+  attachments?: ChatAttachment[];
+}) {
+  const { config, model, profile } = await resolveAccess(opts.supabase, opts.userId, opts.modelId);
+  const allowContext = opts.useContext && config.lifeContext;
+
+  const messages: AxisMessage[] = [{ role: "system", content: DOC_SYSTEM }];
+  if (allowContext) {
+    messages.push({
+      role: "system",
+      content: `Current AXIS data for this user:\n${await buildContext(opts.supabase, profile)}`,
+    });
+  }
+
+  const parts: ContentPart[] = [
+    { type: "input_text", text: `Create a document for this request:\n${opts.prompt}` },
+  ];
+  for (const a of opts.attachments ?? []) {
+    if (a.kind === "image") parts.push({ type: "input_image", image_url: a.dataUrl });
+    else if (a.kind === "file")
+      parts.push({ type: "input_file", filename: a.name, file_data: a.dataUrl });
+    else
+      parts.push({
+        type: "input_text",
+        text: `Attached file "${a.name}" contents:\n\`\`\`\n${a.text.slice(0, 60000)}\n\`\`\``,
+      });
+  }
+  messages.push({ role: "user", content: parts });
+
+  const raw = await runModel({
+    model: model.underlying,
+    messages,
+    jsonSchema: { name: "axis_document", schema: DOC_SCHEMA as unknown as Record<string, unknown> },
+  });
+
+  const spec = parseJson<DocSpec>(raw);
+  await logChat(opts.supabase, opts.userId, {
+    model: model.id,
+    prompt: `[pdf] ${opts.prompt}`,
+    response: raw,
+    contextEnabled: allowContext,
+    source: opts.source,
+  });
+  return { spec, model: model.id, contextUsed: allowContext };
+}

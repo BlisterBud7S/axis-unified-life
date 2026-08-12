@@ -170,7 +170,7 @@ export async function downloadDocPdf(spec: DocSpec) {
       const cols = Math.max(...rows.map((r) => r.length), 1);
       const colW = CW / cols;
       rows.forEach((row, i) => {
-        const cells = row.map((c, ci) => doc.splitTextToSize(c, colW - 16) as string[]);
+        const cells = row.map((c) => doc.splitTextToSize(c, colW - 16) as string[]);
         const rowH = Math.max(...cells.map((c) => c.length)) * 14 + 10;
         room(rowH);
         const header = section.kind === "table" && i === 0;
