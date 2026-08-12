@@ -32,6 +32,14 @@ const ChatInput = z.object({
     .default([]),
   attachments: z.array(Attachment).max(5).default([]),
 });
+const DocInput = z.object({
+  prompt: z.string().min(1).max(6000),
+  modelId: z.string().min(1),
+  useContext: z.boolean(),
+  source: z.string().min(1).max(40),
+  attachments: z.array(Attachment).max(5).default([]),
+});
+
 
 
 const ScanInput = z.object({
