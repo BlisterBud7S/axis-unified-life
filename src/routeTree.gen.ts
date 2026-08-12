@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as AuthenticatedAiRouteImport } from './routes/_authenticated/ai'
+import { Route as AuthenticatedAiHistoryRouteImport } from './routes/_authenticated/ai-history'
 import { Route as AuthenticatedCodeRouteImport } from './routes/_authenticated/code'
 import { Route as AuthenticatedFinanceRouteImport } from './routes/_authenticated/finance'
 import { Route as AuthenticatedHealthRouteImport } from './routes/_authenticated/health'
@@ -24,7 +25,6 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedSyncRouteImport } from './routes/_authenticated/sync'
 import { Route as AuthLoginRouteImport } from './routes/auth.login'
 import { Route as AuthSignupRouteImport } from './routes/auth.signup'
-import { Route as AuthenticatedAiHistoryRouteImport } from './routes/_authenticated/ai.history'
 import { Route as AuthenticatedCheckoutSuccessRouteImport } from './routes/_authenticated/checkout.success'
 import { Route as ApiPublicCalendarTokenRouteImport } from './routes/api/public/calendar.$token'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
@@ -46,6 +46,11 @@ const OnboardingRoute = OnboardingRouteImport.update({
 const AuthenticatedAiRoute = AuthenticatedAiRouteImport.update({
   id: '/ai',
   path: '/ai',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAiHistoryRoute = AuthenticatedAiHistoryRouteImport.update({
+  id: '/ai-history',
+  path: '/ai-history',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedCodeRoute = AuthenticatedCodeRouteImport.update({
@@ -103,11 +108,6 @@ const AuthSignupRoute = AuthSignupRouteImport.update({
   path: '/auth/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedAiHistoryRoute = AuthenticatedAiHistoryRouteImport.update({
-  id: '/history',
-  path: '/history',
-  getParentRoute: () => AuthenticatedAiRoute,
-} as any)
 const AuthenticatedCheckoutSuccessRoute =
   AuthenticatedCheckoutSuccessRouteImport.update({
     id: '/checkout/success',
@@ -129,7 +129,8 @@ const ApiPublicPaymentsWebhookRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/onboarding': typeof OnboardingRoute
-  '/ai': typeof AuthenticatedAiRouteWithChildren
+  '/ai': typeof AuthenticatedAiRoute
+  '/ai-history': typeof AuthenticatedAiHistoryRoute
   '/code': typeof AuthenticatedCodeRoute
   '/finance': typeof AuthenticatedFinanceRoute
   '/health': typeof AuthenticatedHealthRoute
@@ -141,7 +142,6 @@ export interface FileRoutesByFullPath {
   '/sync': typeof AuthenticatedSyncRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
-  '/ai/history': typeof AuthenticatedAiHistoryRoute
   '/checkout/success': typeof AuthenticatedCheckoutSuccessRoute
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -149,7 +149,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/onboarding': typeof OnboardingRoute
-  '/ai': typeof AuthenticatedAiRouteWithChildren
+  '/ai': typeof AuthenticatedAiRoute
+  '/ai-history': typeof AuthenticatedAiHistoryRoute
   '/code': typeof AuthenticatedCodeRoute
   '/finance': typeof AuthenticatedFinanceRoute
   '/health': typeof AuthenticatedHealthRoute
@@ -161,7 +162,6 @@ export interface FileRoutesByTo {
   '/sync': typeof AuthenticatedSyncRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
-  '/ai/history': typeof AuthenticatedAiHistoryRoute
   '/checkout/success': typeof AuthenticatedCheckoutSuccessRoute
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -171,7 +171,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/onboarding': typeof OnboardingRoute
-  '/_authenticated/ai': typeof AuthenticatedAiRouteWithChildren
+  '/_authenticated/ai': typeof AuthenticatedAiRoute
+  '/_authenticated/ai-history': typeof AuthenticatedAiHistoryRoute
   '/_authenticated/code': typeof AuthenticatedCodeRoute
   '/_authenticated/finance': typeof AuthenticatedFinanceRoute
   '/_authenticated/health': typeof AuthenticatedHealthRoute
@@ -183,7 +184,6 @@ export interface FileRoutesById {
   '/_authenticated/sync': typeof AuthenticatedSyncRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/signup': typeof AuthSignupRoute
-  '/_authenticated/ai/history': typeof AuthenticatedAiHistoryRoute
   '/_authenticated/checkout/success': typeof AuthenticatedCheckoutSuccessRoute
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -194,6 +194,7 @@ export interface FileRouteTypes {
     | '/'
     | '/onboarding'
     | '/ai'
+    | '/ai-history'
     | '/code'
     | '/finance'
     | '/health'
@@ -205,7 +206,6 @@ export interface FileRouteTypes {
     | '/sync'
     | '/auth/login'
     | '/auth/signup'
-    | '/ai/history'
     | '/checkout/success'
     | '/api/public/calendar/$token'
     | '/api/public/payments/webhook'
@@ -214,6 +214,7 @@ export interface FileRouteTypes {
     | '/'
     | '/onboarding'
     | '/ai'
+    | '/ai-history'
     | '/code'
     | '/finance'
     | '/health'
@@ -225,7 +226,6 @@ export interface FileRouteTypes {
     | '/sync'
     | '/auth/login'
     | '/auth/signup'
-    | '/ai/history'
     | '/checkout/success'
     | '/api/public/calendar/$token'
     | '/api/public/payments/webhook'
@@ -235,6 +235,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/onboarding'
     | '/_authenticated/ai'
+    | '/_authenticated/ai-history'
     | '/_authenticated/code'
     | '/_authenticated/finance'
     | '/_authenticated/health'
@@ -246,7 +247,6 @@ export interface FileRouteTypes {
     | '/_authenticated/sync'
     | '/auth/login'
     | '/auth/signup'
-    | '/_authenticated/ai/history'
     | '/_authenticated/checkout/success'
     | '/api/public/calendar/$token'
     | '/api/public/payments/webhook'
@@ -290,6 +290,13 @@ declare module '@tanstack/react-router' {
       path: '/ai'
       fullPath: '/ai'
       preLoaderRoute: typeof AuthenticatedAiRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ai-history': {
+      id: '/_authenticated/ai-history'
+      path: '/ai-history'
+      fullPath: '/ai-history'
+      preLoaderRoute: typeof AuthenticatedAiHistoryRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/code': {
@@ -369,13 +376,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSignupRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/ai/history': {
-      id: '/_authenticated/ai/history'
-      path: '/history'
-      fullPath: '/ai/history'
-      preLoaderRoute: typeof AuthenticatedAiHistoryRouteImport
-      parentRoute: typeof AuthenticatedAiRoute
-    }
     '/_authenticated/checkout/success': {
       id: '/_authenticated/checkout/success'
       path: '/checkout/success'
@@ -400,20 +400,9 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface AuthenticatedAiRouteChildren {
-  AuthenticatedAiHistoryRoute: typeof AuthenticatedAiHistoryRoute
-}
-
-const AuthenticatedAiRouteChildren: AuthenticatedAiRouteChildren = {
-  AuthenticatedAiHistoryRoute: AuthenticatedAiHistoryRoute,
-}
-
-const AuthenticatedAiRouteWithChildren = AuthenticatedAiRoute._addFileChildren(
-  AuthenticatedAiRouteChildren,
-)
-
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedAiRoute: typeof AuthenticatedAiRouteWithChildren
+  AuthenticatedAiRoute: typeof AuthenticatedAiRoute
+  AuthenticatedAiHistoryRoute: typeof AuthenticatedAiHistoryRoute
   AuthenticatedCodeRoute: typeof AuthenticatedCodeRoute
   AuthenticatedFinanceRoute: typeof AuthenticatedFinanceRoute
   AuthenticatedHealthRoute: typeof AuthenticatedHealthRoute
@@ -427,7 +416,8 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedAiRoute: AuthenticatedAiRouteWithChildren,
+  AuthenticatedAiRoute: AuthenticatedAiRoute,
+  AuthenticatedAiHistoryRoute: AuthenticatedAiHistoryRoute,
   AuthenticatedCodeRoute: AuthenticatedCodeRoute,
   AuthenticatedFinanceRoute: AuthenticatedFinanceRoute,
   AuthenticatedHealthRoute: AuthenticatedHealthRoute,
