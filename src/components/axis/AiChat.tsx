@@ -14,11 +14,54 @@ import {
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
-import { Bot, Send, Sparkles, User } from "lucide-react";
+import { Bot, FileText, Paperclip, Send, Sparkles, User, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 
-export type ChatMessage = { role: "user" | "assistant"; content: string };
+export type ChatAttachment =
+  | { kind: "image"; name: string; dataUrl: string }
+  | { kind: "file"; name: string; mimeType: string; dataUrl: string }
+  | { kind: "text"; name: string; text: string };
+
+export type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+  attachments?: Array<{ kind: ChatAttachment["kind"]; name: string; previewUrl?: string }>;
+};
+
+const MAX_FILES = 5;
+const MAX_BYTES = 5 * 1024 * 1024;
+const TEXT_EXT =
+  /\.(txt|md|markdown|csv|tsv|json|jsonc|ya?ml|xml|html?|css|scss|js|jsx|ts|tsx|py|rb|go|rs|java|kt|c|h|cpp|cs|php|sh|sql|env|log|ics)$/i;
+
+function readAs(file: File, as: "text" | "dataUrl") {
+  return new Promise<string>((resolve, reject) => {
+    const r = new FileReader();
+    r.onerror = () => reject(new Error(`Could not read ${file.name}`));
+    r.onload = () => resolve(String(r.result));
+    if (as === "text") r.readAsText(file);
+    else r.readAsDataURL(file);
+  });
+}
+
+async function toAttachment(file: File): Promise<ChatAttachment> {
+  if (file.size > MAX_BYTES) throw new Error(`${file.name} is larger than 5 MB.`);
+  if (file.type.startsWith("image/")) {
+    return { kind: "image", name: file.name, dataUrl: await readAs(file, "dataUrl") };
+  }
+  if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) {
+    return {
+      kind: "file",
+      name: file.name,
+      mimeType: "application/pdf",
+      dataUrl: await readAs(file, "dataUrl"),
+    };
+  }
+  if (file.type.startsWith("text/") || TEXT_EXT.test(file.name) || file.type === "application/json") {
+    return { kind: "text", name: file.name, text: await readAs(file, "text") };
+  }
+  throw new Error(`${file.name} isn't supported — attach images, PDFs or text/code files.`);
+}
 
 const SUGGESTIONS = [
   "Plan my week around my open tasks",
@@ -26,6 +69,7 @@ const SUGGESTIONS = [
   "Where is my money leaking this month?",
   "What should I do next for my top target school?",
 ];
+
 
 export function AiChat({
   source,
