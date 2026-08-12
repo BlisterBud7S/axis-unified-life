@@ -19,7 +19,6 @@ const spec = {
 const out: string[] = [];
 // stub browser save
 const fs = await import("node:fs");
-const origSave = (jsPDF as any).prototype.save;
-(jsPDF as any).prototype.save = function (name: string) { fs.writeFileSync("/tmp/pdfqa/out.pdf", Buffer.from(this.output("arraybuffer"))); };
+(jsPDF as any).API.save = function (this: any) { fs.writeFileSync("/tmp/pdfqa/out.pdf", Buffer.from(this.output("arraybuffer"))); return this; };
 await downloadDocPdf(spec as any);
 console.log("written", out.length);
