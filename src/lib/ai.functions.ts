@@ -32,6 +32,14 @@ const ChatInput = z.object({
     .default([]),
   attachments: z.array(Attachment).max(5).default([]),
 });
+const DocInput = z.object({
+  prompt: z.string().min(1).max(6000),
+  modelId: z.string().min(1),
+  useContext: z.boolean(),
+  source: z.string().min(1).max(40),
+  attachments: z.array(Attachment).max(5).default([]),
+});
+
 
 
 const ScanInput = z.object({
@@ -87,5 +95,21 @@ export const generateSchoolPlan = createServerFn({ method: "POST" })
       userId: context.userId,
       modelId: data.modelId,
       schoolId: data.schoolId,
+    });
+  });
+
+export const axisDocument = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => DocInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const { makeDocument } = await import("@/lib/axis-ai.server");
+    return makeDocument({
+      supabase: context.supabase,
+      userId: context.userId,
+      modelId: data.modelId,
+      prompt: data.prompt,
+      useContext: data.useContext,
+      source: data.source,
+      attachments: data.attachments,
     });
   });

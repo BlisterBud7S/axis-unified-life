@@ -118,7 +118,15 @@ function AiHub() {
           </Card>
 
           <Card>
-            <CardTitle>Recent AI activity</CardTitle>
+            <CardTitle
+              action={
+                <Link to="/ai-history" className="text-xs text-primary hover:underline">
+                  View all
+                </Link>
+              }
+            >
+              Recent AI activity
+            </CardTitle>
             {(logs ?? []).length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 Nothing yet — ask your first question on the left.
@@ -126,11 +134,16 @@ function AiHub() {
             ) : (
               <ul className="space-y-2">
                 {(logs ?? []).slice(0, 8).map((l) => (
-                  <li key={l.id} className="rounded-xl border border-border bg-secondary/30 p-3">
+                  <li key={l.id}>
+                    <Link
+                      to="/ai-history"
+                      className="block rounded-xl border border-border bg-secondary/30 p-3 transition-colors hover:border-primary/50"
+                    >
                     <p className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Bot className="h-3 w-3" /> {l.model_used} · {l.source}
                     </p>
                     <p className="mt-1 line-clamp-2 text-sm text-foreground">{l.prompt}</p>
+                    </Link>
                   </li>
                 ))}
               </ul>
