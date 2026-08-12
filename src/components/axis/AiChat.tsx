@@ -14,11 +14,54 @@ import {
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
-import { Bot, Send, Sparkles, User } from "lucide-react";
+import { Bot, FileText, Paperclip, Send, Sparkles, User, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 
-export type ChatMessage = { role: "user" | "assistant"; content: string };
+export type ChatAttachment =
+  | { kind: "image"; name: string; dataUrl: string }
+  | { kind: "file"; name: string; mimeType: string; dataUrl: string }
+  | { kind: "text"; name: string; text: string };
+
+export type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+  attachments?: Array<{ kind: ChatAttachment["kind"]; name: string; previewUrl?: string }>;
+};
+
+const MAX_FILES = 5;
+const MAX_BYTES = 5 * 1024 * 1024;
+const TEXT_EXT =
+  /\.(txt|md|markdown|csv|tsv|json|jsonc|ya?ml|xml|html?|css|scss|js|jsx|ts|tsx|py|rb|go|rs|java|kt|c|h|cpp|cs|php|sh|sql|env|log|ics)$/i;
+
+function readAs(file: File, as: "text" | "dataUrl") {
+  return new Promise<string>((resolve, reject) => {
+    const r = new FileReader();
+    r.onerror = () => reject(new Error(`Could not read ${file.name}`));
+    r.onload = () => resolve(String(r.result));
+    if (as === "text") r.readAsText(file);
+    else r.readAsDataURL(file);
+  });
+}
+
+async function toAttachment(file: File): Promise<ChatAttachment> {
+  if (file.size > MAX_BYTES) throw new Error(`${file.name} is larger than 5 MB.`);
+  if (file.type.startsWith("image/")) {
+    return { kind: "image", name: file.name, dataUrl: await readAs(file, "dataUrl") };
+  }
+  if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) {
+    return {
+      kind: "file",
+      name: file.name,
+      mimeType: "application/pdf",
+      dataUrl: await readAs(file, "dataUrl"),
+    };
+  }
+  if (file.type.startsWith("text/") || TEXT_EXT.test(file.name) || file.type === "application/json") {
+    return { kind: "text", name: file.name, text: await readAs(file, "text") };
+  }
+  throw new Error(`${file.name} isn't supported — attach images, PDFs or text/code files.`);
+}
 
 const SUGGESTIONS = [
   "Plan my week around my open tasks",
@@ -26,6 +69,7 @@ const SUGGESTIONS = [
   "Where is my money leaking this month?",
   "What should I do next for my top target school?",
 ];
+
 
 export function AiChat({
   source,
@@ -46,8 +90,10 @@ export function AiChat({
   const [useContext, setUseContext] = useState(config.lifeContext);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
+  const [pending, setPending] = useState<ChatAttachment[]>([]);
   const [error, setError] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!allowed.some((m) => m.id === modelId)) {
@@ -65,10 +111,17 @@ export function AiChat({
 
   const chatFn = useServerFn(axisChat);
   const send = useMutation({
-    mutationFn: async (message: string) => {
-      const history = messages;
+    mutationFn: async (input: { message: string; attachments: ChatAttachment[] }) => {
+      const history = messages.map((m) => ({ role: m.role, content: m.content }));
       const res = await chatFn({
-        data: { message, modelId, useContext, source, history },
+        data: {
+          message: input.message,
+          modelId,
+          useContext,
+          source,
+          history,
+          attachments: input.attachments,
+        },
       });
       return res;
     },
@@ -85,14 +138,43 @@ export function AiChat({
     },
   });
 
-  function submit(text: string) {
-    const message = text.trim();
+  async function addFiles(files: FileList | null) {
+    if (!files?.length) return;
+    setError(null);
+    const room = MAX_FILES - pending.length;
+    const next: ChatAttachment[] = [];
+    for (const file of Array.from(files).slice(0, Math.max(room, 0))) {
+      try {
+        next.push(await toAttachment(file));
+      } catch (e) {
+        setError((e as Error).message);
+      }
+    }
+    if (files.length > room) setError(`You can attach up to ${MAX_FILES} files per message.`);
+    if (next.length) setPending((p) => [...p, ...next]);
+  }
+
+  function submit(text: string, attachments: ChatAttachment[] = pending) {
+    const message = text.trim() || (attachments.length ? "Have a look at this." : "");
     if (!message || send.isPending) return;
     setError(null);
-    setMessages((m) => [...m, { role: "user", content: message }]);
+    setMessages((m) => [
+      ...m,
+      {
+        role: "user",
+        content: message,
+        attachments: attachments.map((a) => ({
+          kind: a.kind,
+          name: a.name,
+          ...(a.kind === "image" ? { previewUrl: a.dataUrl } : {}),
+        })),
+      },
+    ]);
     setDraft("");
-    send.mutate(message);
+    setPending([]);
+    send.mutate({ message, attachments });
   }
+
 
   const active = modelById(modelId);
 
@@ -172,6 +254,28 @@ export function AiChat({
                 {m.role === "user" ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
               </div>
               <div className="min-w-0 flex-1 text-sm leading-relaxed text-foreground">
+                {m.attachments?.length ? (
+                  <div className="mb-1.5 flex flex-wrap gap-2">
+                    {m.attachments.map((a, j) =>
+                      a.previewUrl ? (
+                        <img
+                          key={j}
+                          src={a.previewUrl}
+                          alt={a.name}
+                          className="h-16 w-16 rounded-lg border border-border object-cover"
+                        />
+                      ) : (
+                        <span
+                          key={j}
+                          className="flex max-w-[180px] items-center gap-1.5 rounded-lg border border-border bg-secondary/40 px-2 py-1 text-xs text-muted-foreground"
+                        >
+                          <FileText className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{a.name}</span>
+                        </span>
+                      ),
+                    )}
+                  </div>
+                ) : null}
                 <div className="prose prose-invert prose-sm max-w-none prose-p:my-1.5 prose-ul:my-1.5 prose-headings:mt-3 prose-headings:mb-1">
                   <ReactMarkdown>{m.content}</ReactMarkdown>
                 </div>
@@ -185,10 +289,37 @@ export function AiChat({
         <div ref={endRef} />
       </div>
 
+      {error ? <p className="mt-2 text-xs text-destructive">{error}</p> : null}
       {error && /plan|Upgrade|upgrade/.test(error) ? (
         <Link to="/plans" className="mt-2 text-xs text-primary hover:underline">
           See plans and upgrade →
         </Link>
+      ) : null}
+
+      {pending.length ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {pending.map((a, i) => (
+            <div
+              key={i}
+              className="relative flex max-w-[190px] items-center gap-1.5 rounded-lg border border-border bg-secondary/40 py-1 pl-1.5 pr-6 text-xs text-muted-foreground"
+            >
+              {a.kind === "image" ? (
+                <img src={a.dataUrl} alt={a.name} className="h-6 w-6 rounded object-cover" />
+              ) : (
+                <FileText className="h-3.5 w-3.5 shrink-0" />
+              )}
+              <span className="truncate">{a.name}</span>
+              <button
+                type="button"
+                aria-label={`Remove ${a.name}`}
+                onClick={() => setPending((p) => p.filter((_, j) => j !== i))}
+                className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
       ) : null}
 
       <form
@@ -198,16 +329,52 @@ export function AiChat({
           submit(draft);
         }}
       >
+        <input
+          ref={fileRef}
+          type="file"
+          multiple
+          accept="image/*,application/pdf,text/*,.md,.csv,.json,.yml,.yaml,.ics,.log"
+          className="hidden"
+          onChange={(e) => {
+            void addFiles(e.target.files);
+            e.target.value = "";
+          }}
+        />
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          aria-label="Attach images or files"
+          title="Attach images, PDFs or text files"
+          onClick={() => fileRef.current?.click()}
+          disabled={send.isPending || pending.length >= MAX_FILES}
+        >
+          <Paperclip className="h-4 w-4" />
+        </Button>
         <Input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder="Ask AXIS…"
+          placeholder={pending.length ? "Ask about the attachments…" : "Ask AXIS…"}
           aria-label="Message AXIS"
+          onPaste={(e) => {
+            const files = Array.from(e.clipboardData.files);
+            if (files.length) {
+              e.preventDefault();
+              const dt = new DataTransfer();
+              files.forEach((f) => dt.items.add(f));
+              void addFiles(dt.files);
+            }
+          }}
         />
-        <Button type="submit" size="icon" disabled={send.isPending || !draft.trim()}>
+        <Button
+          type="submit"
+          size="icon"
+          disabled={send.isPending || (!draft.trim() && pending.length === 0)}
+        >
           <Send className="h-4 w-4" />
         </Button>
       </form>
     </div>
   );
 }
+

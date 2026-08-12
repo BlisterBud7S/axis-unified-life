@@ -2,6 +2,25 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+const Attachment = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("image"),
+    name: z.string().min(1).max(200),
+    dataUrl: z.string().startsWith("data:image/").max(8_000_000),
+  }),
+  z.object({
+    kind: z.literal("file"),
+    name: z.string().min(1).max(200),
+    mimeType: z.string().min(1).max(120),
+    dataUrl: z.string().startsWith("data:").max(8_000_000),
+  }),
+  z.object({
+    kind: z.literal("text"),
+    name: z.string().min(1).max(200),
+    text: z.string().max(200_000),
+  }),
+]);
+
 const ChatInput = z.object({
   message: z.string().min(1).max(6000),
   modelId: z.string().min(1),
@@ -11,7 +30,9 @@ const ChatInput = z.object({
     .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() }))
     .max(30)
     .default([]),
+  attachments: z.array(Attachment).max(5).default([]),
 });
+
 
 const ScanInput = z.object({
   imageDataUrl: z.string().startsWith("data:image/"),
@@ -37,6 +58,8 @@ export const axisChat = createServerFn({ method: "POST" })
       message: data.message,
       useContext: data.useContext,
       source: data.source,
+      attachments: data.attachments,
+
     });
   });
 

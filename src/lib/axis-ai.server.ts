@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { effectiveTier, modelById, tierConfig, canUseModel, type TierId } from "@/lib/tiers";
-import { runModel, parseJson, type AxisMessage } from "@/lib/ai-gateway.server";
+import { runModel, parseJson, type AxisMessage, type ContentPart } from "@/lib/ai-gateway.server";
 
 export type Client = SupabaseClient<Database>;
 
@@ -108,6 +108,11 @@ export async function logChat(
   });
 }
 
+export type ChatAttachment =
+  | { kind: "image"; name: string; dataUrl: string }
+  | { kind: "file"; name: string; mimeType: string; dataUrl: string }
+  | { kind: "text"; name: string; text: string };
+
 export async function chat(opts: {
   supabase: Client;
   userId: string;
@@ -116,6 +121,7 @@ export async function chat(opts: {
   message: string;
   useContext: boolean;
   source: string;
+  attachments?: ChatAttachment[];
 }) {
   const { config, model, profile } = await resolveAccess(opts.supabase, opts.userId, opts.modelId);
   const allowContext = opts.useContext && config.lifeContext;
@@ -128,19 +134,43 @@ export async function chat(opts: {
     });
   }
   for (const m of opts.history.slice(-12)) messages.push({ role: m.role, content: m.content });
-  messages.push({ role: "user", content: opts.message });
+
+  const attachments = opts.attachments ?? [];
+  if (attachments.length === 0) {
+    messages.push({ role: "user", content: opts.message });
+  } else {
+    const parts: ContentPart[] = [{ type: "input_text", text: opts.message }];
+    for (const a of attachments) {
+      if (a.kind === "image") {
+        parts.push({ type: "input_text", text: `Image attached: ${a.name}` });
+        parts.push({ type: "input_image", image_url: a.dataUrl });
+      } else if (a.kind === "file") {
+        parts.push({ type: "input_file", filename: a.name, file_data: a.dataUrl });
+      } else {
+        parts.push({
+          type: "input_text",
+          text: `Attached file "${a.name}" contents:\n\`\`\`\n${a.text.slice(0, 60000)}\n\`\`\``,
+        });
+      }
+    }
+    messages.push({ role: "user", content: parts });
+  }
 
   const reply = await runModel({ model: model.underlying, messages });
   const text = reply.trim() || "I couldn't produce an answer for that — try rephrasing.";
+  const promptLog = attachments.length
+    ? `${opts.message}\n[attachments: ${attachments.map((a) => a.name).join(", ")}]`
+    : opts.message;
   await logChat(opts.supabase, opts.userId, {
     model: model.id,
-    prompt: opts.message,
+    prompt: promptLog,
     response: text,
     contextEnabled: allowContext,
     source: opts.source,
   });
   return { reply: text, model: model.id, contextUsed: allowContext };
 }
+
 
 const MEAL_SCHEMA = {
   type: "object",

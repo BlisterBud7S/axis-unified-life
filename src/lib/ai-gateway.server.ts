@@ -2,10 +2,13 @@ const GATEWAY = "https://ai.gateway.lovable.dev/v1";
 
 export type TextPart = { type: "input_text"; text: string };
 export type ImagePart = { type: "input_image"; image_url: string };
+export type FilePart = { type: "input_file"; filename: string; file_data: string };
+export type ContentPart = TextPart | ImagePart | FilePart;
 export type AxisMessage = {
   role: "system" | "user" | "assistant";
-  content: string | Array<TextPart | ImagePart>;
+  content: string | ContentPart[];
 };
+
 
 type JsonSchema = { name: string; schema: Record<string, unknown> };
 
@@ -125,11 +128,13 @@ export async function runModel(opts: {
         content:
           typeof m.content === "string"
             ? m.content
-            : m.content.map((p) =>
-                p.type === "input_text"
-                  ? { type: "text", text: p.text }
-                  : { type: "image_url", image_url: { url: p.image_url } },
-              ),
+            : m.content.map((p) => {
+                if (p.type === "input_text") return { type: "text", text: p.text };
+                if (p.type === "input_image")
+                  return { type: "image_url", image_url: { url: p.image_url } };
+                return { type: "file", file: { filename: p.filename, file_data: p.file_data } };
+              }),
+
       })),
       ...(jsonSchema
         ? {
