@@ -38,14 +38,14 @@ function Onboarding() {
     e.preventDefault();
     if (!user || !fullName.trim()) return;
     setBusy(true);
-    const { error } = await supabase.from("users").upsert(
-      {
-        id: user.id,
+    const { error } = await supabase
+      .from("users")
+      .update({
         email: user.email ?? null,
         full_name: fullName.trim() || profile?.full_name || null,
-      },
-      { onConflict: "id" },
-    );
+      })
+      .eq("id", user.id);
+
     setBusy(false);
     if (error) {
       toast.error(error.message);
