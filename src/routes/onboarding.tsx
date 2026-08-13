@@ -1,7 +1,7 @@
 import { Button } from "@/components/axis/Button";
 import { Card } from "@/components/axis/Card";
 import { Input, Label } from "@/components/axis/Field";
-import { useAuth, useProfile } from "@/lib/auth";
+import { useAuth } from "@/lib/auth";
 import { updateMyProfileName } from "@/lib/profile.functions";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -26,7 +26,6 @@ function Onboarding() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user, loading } = useAuth();
-  const { data: profile } = useProfile();
   const saveProfileName = useServerFn(updateMyProfileName);
   const [fullName, setFullName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -41,7 +40,7 @@ function Onboarding() {
     if (!user || !fullName.trim()) return;
     setBusy(true);
     try {
-      await saveProfileName({ data: { fullName: fullName.trim() || profile?.full_name || "" } });
+      await saveProfileName({ data: { fullName: fullName.trim() } });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to save your name.");
       setBusy(false);
