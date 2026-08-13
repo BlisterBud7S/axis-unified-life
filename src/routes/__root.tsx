@@ -90,6 +90,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "AXIS unifies tasks, finance, health, school applications and AI assistance in one dark, focused dashboard.",
       },
       { name: "author", content: "AXIS" },
+      {
+        name: "google-site-verification",
+        content: "-djhtEUtu5QG6QesjD8Duk1Rp4izHcz6U_2DyMWrWWA",
+      },
       { name: "theme-color", content: "#0A0F1E" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
