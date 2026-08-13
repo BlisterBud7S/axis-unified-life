@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as AuthenticatedAiRouteImport } from './routes/_authenticated/ai'
 import { Route as AuthenticatedAiHistoryRouteImport } from './routes/_authenticated/ai-history'
 import { Route as AuthenticatedCodeRouteImport } from './routes/_authenticated/code'
@@ -41,6 +42,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAiRoute = AuthenticatedAiRouteImport.update({
@@ -129,6 +135,7 @@ const ApiPublicPaymentsWebhookRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/onboarding': typeof OnboardingRoute
+  '/pricing': typeof PricingRoute
   '/ai': typeof AuthenticatedAiRoute
   '/ai-history': typeof AuthenticatedAiHistoryRoute
   '/code': typeof AuthenticatedCodeRoute
@@ -149,6 +156,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/onboarding': typeof OnboardingRoute
+  '/pricing': typeof PricingRoute
   '/ai': typeof AuthenticatedAiRoute
   '/ai-history': typeof AuthenticatedAiHistoryRoute
   '/code': typeof AuthenticatedCodeRoute
@@ -171,6 +179,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/onboarding': typeof OnboardingRoute
+  '/pricing': typeof PricingRoute
   '/_authenticated/ai': typeof AuthenticatedAiRoute
   '/_authenticated/ai-history': typeof AuthenticatedAiHistoryRoute
   '/_authenticated/code': typeof AuthenticatedCodeRoute
@@ -193,6 +202,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/onboarding'
+    | '/pricing'
     | '/ai'
     | '/ai-history'
     | '/code'
@@ -213,6 +223,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/onboarding'
+    | '/pricing'
     | '/ai'
     | '/ai-history'
     | '/code'
@@ -234,6 +245,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/onboarding'
+    | '/pricing'
     | '/_authenticated/ai'
     | '/_authenticated/ai-history'
     | '/_authenticated/code'
@@ -256,6 +268,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   OnboardingRoute: typeof OnboardingRoute
+  PricingRoute: typeof PricingRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthSignupRoute: typeof AuthSignupRoute
   ApiPublicCalendarTokenRoute: typeof ApiPublicCalendarTokenRoute
@@ -283,6 +296,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/onboarding'
       preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/ai': {
@@ -437,6 +457,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   OnboardingRoute: OnboardingRoute,
+  PricingRoute: PricingRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthSignupRoute: AuthSignupRoute,
   ApiPublicCalendarTokenRoute: ApiPublicCalendarTokenRoute,
