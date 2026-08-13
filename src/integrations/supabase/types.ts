@@ -690,10 +690,6 @@ export type Database = {
         Args: { check_env?: string; user_uuid: string }
         Returns: boolean
       }
-      update_my_profile_name: {
-        Args: { new_full_name: string }
-        Returns: undefined
-      }
     }
     Enums: {
       [_ in never]: never
