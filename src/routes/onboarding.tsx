@@ -1,10 +1,11 @@
 import { Button } from "@/components/axis/Button";
 import { Card } from "@/components/axis/Card";
 import { Input, Label } from "@/components/axis/Field";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useProfile } from "@/lib/auth";
+import { updateMyProfileName } from "@/lib/profile.functions";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -26,6 +27,7 @@ function Onboarding() {
   const queryClient = useQueryClient();
   const { user, loading } = useAuth();
   const { data: profile } = useProfile();
+  const saveProfileName = useServerFn(updateMyProfileName);
   const [fullName, setFullName] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -38,20 +40,15 @@ function Onboarding() {
     e.preventDefault();
     if (!user || !fullName.trim()) return;
     setBusy(true);
-    const { error } = await supabase
-      .from("users")
-      .update({
-        email: user.email ?? null,
-        full_name: fullName.trim() || profile?.full_name || null,
-      })
-      .eq("id", user.id);
-
-    setBusy(false);
-    if (error) {
-      toast.error(error.message);
+    try {
+      await saveProfileName({ data: { fullName: fullName.trim() || profile?.full_name || "" } });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to save your name.");
+      setBusy(false);
       return;
     }
     await queryClient.invalidateQueries({ queryKey: ["profile"] });
+    setBusy(false);
     navigate({ to: "/home" });
   }
 
