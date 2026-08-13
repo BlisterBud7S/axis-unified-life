@@ -21,14 +21,22 @@ function isPreviewHost(hostname: string) {
   );
 }
 
-async function unregisterAppWorkers() {
-  if (!("serviceWorker" in navigator)) return;
-  const registrations = await navigator.serviceWorker.getRegistrations();
-  await Promise.allSettled(
-    registrations
-      .filter((r) => (r.active?.scriptURL ?? r.installing?.scriptURL ?? "").endsWith(SW_URL))
-      .map((r) => r.unregister()),
-  );
+async function clearAppWorkerState() {
+  if ("serviceWorker" in navigator) {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.allSettled(
+      registrations
+        .filter((r) => (r.active?.scriptURL ?? r.installing?.scriptURL ?? "").endsWith(SW_URL))
+        .map((r) => r.unregister()),
+    );
+  }
+
+  if ("caches" in window) {
+    const cacheNames = await caches.keys();
+    await Promise.allSettled(
+      cacheNames.filter((name) => name.startsWith("axis-")).map((name) => caches.delete(name)),
+    );
+  }
 }
 
 export function registerOfflineSupport() {
@@ -43,11 +51,21 @@ export function registerOfflineSupport() {
 
 
   if (blocked) {
-    void unregisterAppWorkers();
+    void clearAppWorkerState();
     return;
   }
 
-  void navigator.serviceWorker.register(SW_URL, { scope: "/" }).catch(() => {
-    // offline support is optional — never break the app over it
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
   });
+
+  void navigator.serviceWorker
+    .register(SW_URL, { scope: "/", updateViaCache: "none" })
+    .then((registration) => registration.update())
+    .catch(() => {
+      // offline support is optional — never break the app over it
+    });
 }

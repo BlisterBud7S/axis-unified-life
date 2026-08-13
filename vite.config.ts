@@ -26,6 +26,9 @@ export default defineConfig({
         devOptions: { enabled: false },
         manifest: false,
         workbox: {
+          cleanupOutdatedCaches: true,
+          clientsClaim: true,
+          skipWaiting: true,
           navigateFallbackDenylist: [/^\/~oauth/, /^\/api\//],
           globPatterns: ["**/*.{js,css,woff2,png,svg,ico}"],
           runtimeCaching: [
@@ -41,8 +44,12 @@ export default defineConfig({
             {
               urlPattern: ({ request, sameOrigin }) =>
                 sameOrigin && (request.destination === "script" || request.destination === "style"),
-              handler: "StaleWhileRevalidate",
-              options: { cacheName: "axis-assets" },
+              handler: "NetworkFirst",
+              options: {
+                cacheName: "axis-assets-v2",
+                networkTimeoutSeconds: 5,
+                expiration: { maxEntries: 80 },
+              },
             },
             {
               urlPattern: ({ request, sameOrigin }) =>
