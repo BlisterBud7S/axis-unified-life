@@ -47,6 +47,54 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_media: {
+        Row: {
+          aspect: string | null
+          created_at: string
+          engine: string
+          error_message: string | null
+          id: string
+          job_id: string | null
+          kind: string
+          prompt: string
+          seconds: number | null
+          status: string
+          storage_path: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          aspect?: string | null
+          created_at?: string
+          engine: string
+          error_message?: string | null
+          id?: string
+          job_id?: string | null
+          kind: string
+          prompt: string
+          seconds?: number | null
+          status?: string
+          storage_path?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          aspect?: string | null
+          created_at?: string
+          engine?: string
+          error_message?: string | null
+          id?: string
+          job_id?: string | null
+          kind?: string
+          prompt?: string
+          seconds?: number | null
+          status?: string
+          storage_path?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       bank_connections: {
         Row: {
           account_masked_number: string | null
