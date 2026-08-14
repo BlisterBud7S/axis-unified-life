@@ -118,7 +118,6 @@ export function AiChat({
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("chat");
   const [vertical, setVertical] = useState(false);
-  const docMode = mode === "pdf";
   const endRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
