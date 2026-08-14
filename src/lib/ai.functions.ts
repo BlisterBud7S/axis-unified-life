@@ -113,3 +113,61 @@ export const axisDocument = createServerFn({ method: "POST" })
       attachments: data.attachments,
     });
   });
+
+const ImageInput = z.object({
+  prompt: z.string().min(1).max(2000),
+  modelId: z.string().min(1),
+  aspect: z.string().max(20).optional(),
+  sourceImageDataUrl: z.string().startsWith("data:image/").max(8_000_000).optional(),
+});
+
+const VideoInput = z.object({
+  prompt: z.string().min(1).max(2000),
+  modelId: z.string().min(1),
+  seconds: z.union([z.literal(4), z.literal(6), z.literal(8)]).default(8),
+  vertical: z.boolean().default(false),
+  sourceImageDataUrl: z.string().startsWith("data:image/").max(8_000_000).optional(),
+});
+
+export const axisImage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => ImageInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const { generateImage } = await import("@/lib/ai-media.server");
+    return generateImage({
+      supabase: context.supabase,
+      userId: context.userId,
+      modelId: data.modelId,
+      prompt: data.prompt,
+      ...(data.aspect ? { aspect: data.aspect } : {}),
+      ...(data.sourceImageDataUrl ? { sourceImageDataUrl: data.sourceImageDataUrl } : {}),
+    });
+  });
+
+export const axisVideoStart = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => VideoInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const { startVideo } = await import("@/lib/ai-media.server");
+    return startVideo({
+      supabase: context.supabase,
+      userId: context.userId,
+      modelId: data.modelId,
+      prompt: data.prompt,
+      seconds: data.seconds,
+      vertical: data.vertical,
+      ...(data.sourceImageDataUrl ? { sourceImageDataUrl: data.sourceImageDataUrl } : {}),
+    });
+  });
+
+export const axisVideoStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ mediaId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { videoStatus } = await import("@/lib/ai-media.server");
+    return videoStatus({
+      supabase: context.supabase,
+      userId: context.userId,
+      mediaId: data.mediaId,
+    });
+  });
