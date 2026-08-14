@@ -1,6 +1,6 @@
 import { Button } from "@/components/axis/Button";
 import { Input } from "@/components/axis/Field";
-import { axisChat, axisDocument } from "@/lib/ai.functions";
+import { axisChat, axisDocument, axisImage, axisVideoStart, axisVideoStatus } from "@/lib/ai.functions";
 import { downloadDocPdf, type DocSpec } from "@/lib/axis-doc";
 import { useProfile } from "@/lib/auth";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,20 @@ import {
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
-import { Bot, Download, FileText, FileType2, Paperclip, Send, Sparkles, User, X } from "lucide-react";
+import {
+  Bot,
+  Download,
+  FileText,
+  FileType2,
+  Image as ImageIcon,
+  Loader2,
+  Paperclip,
+  Send,
+  Sparkles,
+  User,
+  Video,
+  X,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 
@@ -29,7 +42,17 @@ export type ChatMessage = {
   content: string;
   attachments?: Array<{ kind: ChatAttachment["kind"]; name: string; previewUrl?: string }>;
   doc?: DocSpec;
+  media?: {
+    id: string;
+    kind: "image" | "video";
+    status: "processing" | "completed" | "failed";
+    url: string | null;
+    prompt: string;
+    error?: string;
+  };
 };
+
+type Mode = "chat" | "pdf" | "image" | "video";
 
 const MAX_FILES = 5;
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -94,7 +117,8 @@ export function AiChat({
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState<ChatAttachment[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [docMode, setDocMode] = useState(false);
+  const [mode, setMode] = useState<Mode>("chat");
+  const [vertical, setVertical] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -171,7 +195,98 @@ export function AiChat({
     },
   });
 
-  const busy = send.isPending || makeDoc.isPending;
+
+  const imageFn = useServerFn(axisImage);
+  const makeImage = useMutation({
+    mutationFn: async (input: { message: string; attachments: ChatAttachment[] }) => {
+      const src = input.attachments.find((a) => a.kind === "image");
+      return imageFn({
+        data: {
+          prompt: input.message,
+          modelId,
+          aspect: vertical ? "9:16 vertical" : "16:9 landscape",
+          ...(src && src.kind === "image" ? { sourceImageDataUrl: src.dataUrl } : {}),
+        },
+      });
+    },
+    onSuccess: (res) => {
+      setMessages((m) => [
+        ...m,
+        { role: "assistant", content: "Here's your image.", media: res },
+      ]);
+      qc.invalidateQueries({ queryKey: ["ai_chat_logs"] });
+    },
+    onError: (e: Error) => {
+      setError(e.message);
+      setMessages((m) => [...m, { role: "assistant", content: `\u26a0\ufe0f ${e.message}` }]);
+    },
+  });
+
+  const videoFn = useServerFn(axisVideoStart);
+  const videoStatusFn = useServerFn(axisVideoStatus);
+
+  function pollVideo(mediaId: string) {
+    let tries = 0;
+    const tick = async () => {
+      tries += 1;
+      try {
+        const res = await videoStatusFn({ data: { mediaId } });
+        setMessages((m) =>
+          m.map((msg) =>
+            msg.media?.id === mediaId
+              ? {
+                  ...msg,
+                  content:
+                    res.status === "completed"
+                      ? "Here's your video."
+                      : res.status === "failed"
+                        ? `\u26a0\ufe0f ${res.error ?? "The video render failed."}`
+                        : msg.content,
+                  media: { ...msg.media, ...res },
+                }
+              : msg,
+          ),
+        );
+        if (res.status === "processing" && tries < 40) setTimeout(() => void tick(), 8000);
+      } catch (e) {
+        setError((e as Error).message);
+      }
+    };
+    setTimeout(() => void tick(), 10000);
+  }
+
+  const makeVideo = useMutation({
+    mutationFn: async (input: { message: string; attachments: ChatAttachment[] }) => {
+      const src = input.attachments.find((a) => a.kind === "image");
+      return videoFn({
+        data: {
+          prompt: input.message,
+          modelId,
+          seconds: 8 as const,
+          vertical,
+          ...(src && src.kind === "image" ? { sourceImageDataUrl: src.dataUrl } : {}),
+        },
+      });
+    },
+    onSuccess: (res) => {
+      setMessages((m) => [
+        ...m,
+        {
+          role: "assistant",
+          content: "Rendering your video — this usually takes one to three minutes.",
+          media: res,
+        },
+      ]);
+      qc.invalidateQueries({ queryKey: ["ai_chat_logs"] });
+      pollVideo(res.id);
+    },
+    onError: (e: Error) => {
+      setError(e.message);
+      setMessages((m) => [...m, { role: "assistant", content: `\u26a0\ufe0f ${e.message}` }]);
+    },
+  });
+
+  const busy = send.isPending || makeDoc.isPending || makeImage.isPending || makeVideo.isPending;
 
   async function addFiles(files: FileList | null) {
     if (!files?.length) return;
@@ -207,7 +322,9 @@ export function AiChat({
     ]);
     setDraft("");
     setPending([]);
-    if (docMode) makeDoc.mutate({ message, attachments });
+    if (mode === "pdf") makeDoc.mutate({ message, attachments });
+    else if (mode === "image") makeImage.mutate({ message, attachments });
+    else if (mode === "video") makeVideo.mutate({ message, attachments });
     else send.mutate({ message, attachments });
   }
 
@@ -248,18 +365,45 @@ export function AiChat({
         >
           <Sparkles className="h-3.5 w-3.5" /> My data
         </button>
-        <button
-          onClick={() => setDocMode((v) => !v)}
-          className={cn(
-            "flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs transition-colors",
-            docMode
-              ? "border-primary bg-primary/15 text-primary"
-              : "border-border text-muted-foreground hover:text-foreground",
-          )}
-          title="Turn the answer into a designed PDF document"
-        >
-          <FileType2 className="h-3.5 w-3.5" /> PDF mode
-        </button>
+        {(
+          [
+            { id: "pdf", label: "PDF", icon: FileType2, title: "Turn the answer into a designed PDF document", locked: false },
+            { id: "image", label: "Image", icon: ImageIcon, title: "Generate an image with AXIS Vision", locked: !config.imageGen },
+            { id: "video", label: "Video", icon: Video, title: "Generate a short video with AXIS Motion", locked: !config.videoGen },
+          ] as const
+        ).map(({ id, label, icon: Icon, title, locked }) => (
+          <button
+            key={id}
+            onClick={() =>
+              locked
+                ? setError(
+                    id === "image"
+                      ? "AXIS Vision image generation is a Plus feature. Upgrade your plan to use it."
+                      : "AXIS Motion video generation is a Pro feature. Upgrade your plan to use it.",
+                  )
+                : setMode((v) => (v === id ? "chat" : id))
+            }
+            className={cn(
+              "flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs transition-colors",
+              mode === id
+                ? "border-primary bg-primary/15 text-primary"
+                : "border-border text-muted-foreground hover:text-foreground",
+              locked && "opacity-60",
+            )}
+            title={title}
+          >
+            <Icon className="h-3.5 w-3.5" /> {label}
+          </button>
+        ))}
+        {mode === "image" || mode === "video" ? (
+          <button
+            onClick={() => setVertical((v) => !v)}
+            className="flex h-8 items-center rounded-lg border border-border px-2.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            title="Switch the output shape"
+          >
+            {vertical ? "9:16" : "16:9"}
+          </button>
+        ) : null}
         <span className="text-xs text-muted-foreground">
           {config.name} plan ·{" "}
           {config.dailyMessages ? `${config.dailyMessages} msgs/day` : "unlimited"}
@@ -341,13 +485,61 @@ export function AiChat({
                     </Button>
                   </div>
                 ) : null}
+                {m.media ? (
+                  <div className="mt-2 overflow-hidden rounded-xl border border-border bg-secondary/30">
+                    {m.media.status === "completed" && m.media.url ? (
+                      m.media.kind === "image" ? (
+                        <img
+                          src={m.media.url}
+                          alt={m.media.prompt}
+                          className="max-h-[420px] w-full object-contain"
+                        />
+                      ) : (
+                        <video
+                          src={m.media.url}
+                          controls
+                          playsInline
+                          className="max-h-[420px] w-full bg-black object-contain"
+                        />
+                      )
+                    ) : m.media.status === "processing" ? (
+                      <div className="flex items-center gap-2 p-4 text-xs text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                        AXIS Motion is rendering your video…
+                      </div>
+                    ) : (
+                      <p className="p-4 text-xs text-destructive">
+                        {m.media.error ?? "That generation failed."}
+                      </p>
+                    )}
+                    {m.media.status === "completed" && m.media.url ? (
+                      <div className="flex items-center justify-between gap-3 border-t border-border p-2.5">
+                        <p className="truncate text-xs text-muted-foreground">{m.media.prompt}</p>
+                        <a
+                          href={m.media.url}
+                          download={`axis-${m.media.kind}.${m.media.kind === "image" ? "png" : "mp4"}`}
+                          className="flex shrink-0 items-center gap-1.5 rounded-lg border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          <Download className="h-3.5 w-3.5" /> Save
+                        </a>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             </div>
           ))
         )}
         {busy ? (
           <p className="px-2 text-xs text-muted-foreground">
-            {active?.name} is {makeDoc.isPending ? "designing your PDF" : "thinking"}…
+            {makeImage.isPending
+              ? "AXIS Vision is painting your image"
+              : makeVideo.isPending
+                ? "AXIS Motion is starting your video"
+                : makeDoc.isPending
+                  ? `${active?.name} is designing your PDF`
+                  : `${active?.name} is thinking`}
+            …
           </p>
         ) : null}
         <div ref={endRef} />
@@ -419,8 +611,12 @@ export function AiChat({
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           placeholder={
-            docMode
+            mode === "pdf"
               ? "Describe the PDF you want…"
+              : mode === "image"
+                ? "Describe the image you want…"
+                : mode === "video"
+                  ? "Describe the video you want…"
               : pending.length
                 ? "Ask about the attachments…"
                 : "Ask AXIS…"
