@@ -48,6 +48,7 @@ export type ChatMessage = {
     status: "processing" | "completed" | "failed";
     url: string | null;
     prompt: string;
+    error?: string;
   };
 };
 
