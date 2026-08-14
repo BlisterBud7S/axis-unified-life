@@ -69,6 +69,8 @@ export type Tier = {
   codeMode: boolean;
   affordability: boolean;
   statementImport: boolean;
+  imageGen: boolean;
+  videoGen: boolean;
 };
 
 export const TIERS: Tier[] = [
@@ -96,6 +98,8 @@ export const TIERS: Tier[] = [
     codeMode: false,
     affordability: false,
     statementImport: false,
+    imageGen: false,
+    videoGen: false,
   },
   {
     id: "plus",
@@ -111,14 +115,17 @@ export const TIERS: Tier[] = [
       "Personal context in AI answers",
       "AXIS Code canvas — coding chat with saved files",
       "Can I afford it? — AI verdicts on your real money",
+      "AXIS Vision — generate and edit images from a prompt",
     ],
-    locked: ["AI admission roadmaps", "Bank statement import", "AXIS Prime engine"],
+    locked: ["AXIS Motion video generation", "AI admission roadmaps", "Bank statement import", "AXIS Prime engine"],
     mealScan: true,
     schoolPath: false,
     lifeContext: true,
     codeMode: true,
     affordability: true,
     statementImport: false,
+    imageGen: true,
+    videoGen: false,
   },
   {
     id: "pro",
@@ -131,6 +138,7 @@ export const TIERS: Tier[] = [
       "AXIS Prime — deepest reasoning engine",
       "AI admission roadmaps per target school",
       "Bank statement import — upload a statement, AXIS logs every transaction",
+      "AXIS Motion — generate short videos with sound from a prompt",
       "600 AI messages a day",
     ],
     locked: ["AXIS Oracle engine", "Unlimited messages"],
@@ -140,6 +148,8 @@ export const TIERS: Tier[] = [
     codeMode: true,
     affordability: true,
     statementImport: true,
+    imageGen: true,
+    videoGen: true,
   },
   {
     id: "elite",
@@ -160,6 +170,8 @@ export const TIERS: Tier[] = [
     codeMode: true,
     affordability: true,
     statementImport: true,
+    imageGen: true,
+    videoGen: true,
   },
 ];
 

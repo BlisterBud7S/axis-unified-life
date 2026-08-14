@@ -15,7 +15,7 @@ export async function resolveAccess(
   supabase: Client,
   userId: string,
   modelId: string,
-  need?: "mealScan" | "schoolPath" | "codeMode" | "affordability" | "statementImport",
+  need?: "mealScan" | "schoolPath" | "codeMode" | "affordability" | "statementImport" | "imageGen" | "videoGen",
 ) {
   const { data: profile, error } = await supabase
     .from("users")
@@ -34,6 +34,8 @@ export async function resolveAccess(
       codeMode: "AXIS Code is a Plus feature. Upgrade your plan to use it.",
       affordability: "The affordability engine is a Plus feature. Upgrade your plan to use it.",
       statementImport: "Bank statement import is a Pro feature. Upgrade your plan to use it.",
+      imageGen: "AXIS Vision image generation is a Plus feature. Upgrade your plan to use it.",
+      videoGen: "AXIS Motion video generation is a Pro feature. Upgrade your plan to use it.",
     };
     throw new Error(messages[need] ?? "That feature needs a higher plan.");
   }
