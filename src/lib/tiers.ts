@@ -261,7 +261,7 @@ export const TIERS: Tier[] = [
     dailyMessages: 15,
     features: [
       "Tasks, habits, finance, health and school tracking",
-      "AXIS Swift engine",
+      "All 22 AXIS AI engines",
       "15 AI messages a day",
     ],
     locked: [
@@ -288,7 +288,7 @@ export const TIERS: Tier[] = [
     dailyMessages: 150,
     features: [
       "Everything in Free",
-      "AXIS Core and AXIS Scout engines",
+      "All 22 AXIS AI engines",
       "150 AI messages a day",
       "Meal photo scanning with calorie estimates",
       "Personal context in AI answers",
@@ -296,7 +296,7 @@ export const TIERS: Tier[] = [
       "Can I afford it? — AI verdicts on your real money",
       "AXIS Vision — generate and edit images from a prompt",
     ],
-    locked: ["AXIS Motion video generation", "AI admission roadmaps", "Bank statement import", "AXIS Prime engine"],
+    locked: ["AXIS Motion video generation", "AI admission roadmaps", "Bank statement import"],
     mealScan: true,
     schoolPath: false,
     lifeContext: true,
@@ -314,13 +314,12 @@ export const TIERS: Tier[] = [
     dailyMessages: 600,
     features: [
       "Everything in Plus",
-      "AXIS Prime — deepest reasoning engine",
-      "AI admission roadmaps per target school",
+            "AI admission roadmaps per target school",
       "Bank statement import — upload a statement, AXIS logs every transaction",
       "AXIS Motion — generate short videos with sound from a prompt",
       "600 AI messages a day",
     ],
-    locked: ["AXIS Oracle engine", "Unlimited messages"],
+    locked: ["Unlimited messages"],
     mealScan: true,
     schoolPath: true,
     lifeContext: true,
@@ -338,8 +337,7 @@ export const TIERS: Tier[] = [
     dailyMessages: null,
     features: [
       "Everything in Pro",
-      "AXIS Oracle — alternate frontier engine",
-      "Unlimited AI messages",
+            "Unlimited AI messages",
       "Priority handling on long analyses",
     ],
     locked: [],
