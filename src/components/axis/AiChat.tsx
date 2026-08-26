@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 import {
   DEFAULT_MODEL_ID,
   MODELS,
+  MODEL_FAMILIES,
+
   canUseModel,
   effectiveTier,
   modelById,
@@ -340,12 +342,17 @@ export function AiChat({
           onChange={(e) => setModelId(e.target.value)}
           className="h-8 rounded-lg border border-border bg-secondary/40 px-2 text-xs text-foreground"
         >
-          {MODELS.map((m) => (
-            <option key={m.id} value={m.id} disabled={!canUseModel(tier, m)}>
-              {m.name}
-              {canUseModel(tier, m) ? "" : ` — ${m.minTier} plan`}
-            </option>
+          {MODEL_FAMILIES.map((family) => (
+            <optgroup key={family} label={family}>
+              {MODELS.filter((m) => m.family === family).map((m) => (
+                <option key={m.id} value={m.id} disabled={!canUseModel(tier, m)}>
+                  {m.name}
+                  {canUseModel(tier, m) ? "" : ` — ${m.minTier} plan`}
+                </option>
+              ))}
+            </optgroup>
           ))}
+
         </select>
         <button
           onClick={() => config.lifeContext && setUseContext((v) => !v)}

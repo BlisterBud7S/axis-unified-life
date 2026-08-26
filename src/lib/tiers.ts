@@ -7,10 +7,15 @@ export type AxisModel = {
   underlying: string;
   minTier: TierId;
   vision: boolean;
+  family: string;
 };
 
-/** AXIS-branded engines. Each maps to a model on the Lovable AI Gateway. */
+/**
+ * Every engine available on the Lovable AI Gateway, exposed under AXIS branding.
+ * All engines are unlocked on every tier — daily message limits still apply per tier.
+ */
 export const MODELS: AxisModel[] = [
+  // ---- Signature AXIS line-up ----
   {
     id: "axis-swift",
     name: "AXIS Swift",
@@ -18,42 +23,216 @@ export const MODELS: AxisModel[] = [
     underlying: "openai/gpt-5.6-luna",
     minTier: "free",
     vision: true,
+    family: "AXIS Signature",
   },
   {
     id: "axis-core",
     name: "AXIS Core",
     tagline: "Balanced reasoning for planning and analysis",
     underlying: "openai/gpt-5.6-terra",
-    minTier: "plus",
+    minTier: "free",
     vision: true,
+    family: "AXIS Signature",
   },
   {
     id: "axis-scout",
     name: "AXIS Scout",
     tagline: "Long-context research and document work",
     underlying: "google/gemini-3.6-flash",
-    minTier: "plus",
+    minTier: "free",
     vision: true,
+    family: "AXIS Signature",
   },
   {
     id: "axis-prime",
     name: "AXIS Prime",
     tagline: "Deepest reasoning — strategy, admissions, finance",
     underlying: "openai/gpt-5.6-sol",
-    minTier: "pro",
+    minTier: "free",
     vision: true,
+    family: "AXIS Signature",
   },
   {
     id: "axis-oracle",
     name: "AXIS Oracle",
     tagline: "Alternate frontier engine for second opinions",
     underlying: "google/gemini-3.1-pro-preview",
-    minTier: "elite",
+    minTier: "free",
     vision: true,
+    family: "AXIS Signature",
+  },
+
+  // ---- Sol line (OpenAI GPT-5.6 / 5.5 / 5.4 / 5.2 / 5) ----
+  {
+    id: "sol-5-5",
+    name: "AXIS Sol 5.5",
+    tagline: "Frontier coding, analysis and professional work",
+    underlying: "openai/gpt-5.5",
+    minTier: "free",
+    vision: true,
+    family: "Sol line",
+  },
+  {
+    id: "sol-5-5-pro",
+    name: "AXIS Sol 5.5 Pro",
+    tagline: "Extended reasoning for the hardest problems",
+    underlying: "openai/gpt-5.5-pro",
+    minTier: "free",
+    vision: true,
+    family: "Sol line",
+  },
+  {
+    id: "sol-5-4",
+    name: "AXIS Sol 5.4",
+    tagline: "Affordable frontier model for everyday depth",
+    underlying: "openai/gpt-5.4",
+    minTier: "free",
+    vision: true,
+    family: "Sol line",
+  },
+  {
+    id: "sol-5-4-mini",
+    name: "AXIS Sol 5.4 Mini",
+    tagline: "Strong mini engine for high-volume work",
+    underlying: "openai/gpt-5.4-mini",
+    minTier: "free",
+    vision: true,
+    family: "Sol line",
+  },
+  {
+    id: "sol-5-4-nano",
+    name: "AXIS Sol 5.4 Nano",
+    tagline: "Fastest, cheapest engine for quick calls",
+    underlying: "openai/gpt-5.4-nano",
+    minTier: "free",
+    vision: true,
+    family: "Sol line",
+  },
+  {
+    id: "sol-5-4-pro",
+    name: "AXIS Sol 5.4 Pro",
+    tagline: "Premium 5.4 reasoning for complex tasks",
+    underlying: "openai/gpt-5.4-pro",
+    minTier: "free",
+    vision: true,
+    family: "Sol line",
+  },
+  {
+    id: "sol-5-2",
+    name: "AXIS Sol 5.2",
+    tagline: "Complex reasoning and problem solving",
+    underlying: "openai/gpt-5.2",
+    minTier: "free",
+    vision: true,
+    family: "Sol line",
+  },
+  {
+    id: "sol-5",
+    name: "AXIS Sol 5",
+    tagline: "Accurate, nuanced all-rounder",
+    underlying: "openai/gpt-5",
+    minTier: "free",
+    vision: true,
+    family: "Sol line",
+  },
+  {
+    id: "sol-5-mini",
+    name: "AXIS Sol 5 Mini",
+    tagline: "Lower-cost general performance",
+    underlying: "openai/gpt-5-mini",
+    minTier: "free",
+    vision: true,
+    family: "Sol line",
+  },
+  {
+    id: "sol-5-nano",
+    name: "AXIS Sol 5 Nano",
+    tagline: "Fast and light for simple tasks",
+    underlying: "openai/gpt-5-nano",
+    minTier: "free",
+    vision: true,
+    family: "Sol line",
+  },
+  {
+    id: "sol-chat",
+    name: "AXIS Converse",
+    tagline: "Natural conversational chat engine",
+    underlying: "openai/chat-latest",
+    minTier: "free",
+    vision: true,
+    family: "Sol line",
+  },
+
+  // ---- Gemini line ----
+  {
+    id: "gem-3-7-flash",
+    name: "AXIS Nova 3.7",
+    tagline: "Latest fast engine for coding and agentic work",
+    underlying: "google/gemini-3.7-flash",
+    minTier: "free",
+    vision: true,
+    family: "Nova line",
+  },
+  {
+    id: "gem-3-5-flash",
+    name: "AXIS Nova 3.5",
+    tagline: "High-efficiency reasoning and coding",
+    underlying: "google/gemini-3.5-flash",
+    minTier: "free",
+    vision: true,
+    family: "Nova line",
+  },
+  {
+    id: "gem-3-1-flash-lite",
+    name: "AXIS Nova Lite",
+    tagline: "Cost-efficient engine for high-volume chat",
+    underlying: "google/gemini-3.1-flash-lite",
+    minTier: "free",
+    vision: true,
+    family: "Nova line",
+  },
+  {
+    id: "gem-3-flash-preview",
+    name: "AXIS Nova Preview",
+    tagline: "Preview engine balancing speed and capability",
+    underlying: "google/gemini-3-flash-preview",
+    minTier: "free",
+    vision: true,
+    family: "Nova line",
+  },
+  {
+    id: "gem-2-5-pro",
+    name: "AXIS Nova Pro 2.5",
+    tagline: "Strong multimodal and large-context reasoning",
+    underlying: "google/gemini-2.5-pro",
+    minTier: "free",
+    vision: true,
+    family: "Nova line",
+  },
+  {
+    id: "gem-2-5-flash",
+    name: "AXIS Nova 2.5",
+    tagline: "Balanced cost and latency with multimodal input",
+    underlying: "google/gemini-2.5-flash",
+    minTier: "free",
+    vision: true,
+    family: "Nova line",
+  },
+  {
+    id: "gem-2-5-flash-lite",
+    name: "AXIS Nova 2.5 Lite",
+    tagline: "Cheapest engine for simple, high-volume tasks",
+    underlying: "google/gemini-2.5-flash-lite",
+    minTier: "free",
+    vision: true,
+    family: "Nova line",
   },
 ];
 
+export const MODEL_FAMILIES = ["AXIS Signature", "Sol line", "Nova line"] as const;
+
 export const DEFAULT_MODEL_ID = "axis-prime";
+
 
 export type Tier = {
   id: TierId;
@@ -82,7 +261,7 @@ export const TIERS: Tier[] = [
     dailyMessages: 15,
     features: [
       "Tasks, habits, finance, health and school tracking",
-      "AXIS Swift engine",
+      "All 22 AXIS AI engines",
       "15 AI messages a day",
     ],
     locked: [
@@ -109,7 +288,7 @@ export const TIERS: Tier[] = [
     dailyMessages: 150,
     features: [
       "Everything in Free",
-      "AXIS Core and AXIS Scout engines",
+      "All 22 AXIS AI engines",
       "150 AI messages a day",
       "Meal photo scanning with calorie estimates",
       "Personal context in AI answers",
@@ -117,7 +296,7 @@ export const TIERS: Tier[] = [
       "Can I afford it? — AI verdicts on your real money",
       "AXIS Vision — generate and edit images from a prompt",
     ],
-    locked: ["AXIS Motion video generation", "AI admission roadmaps", "Bank statement import", "AXIS Prime engine"],
+    locked: ["AXIS Motion video generation", "AI admission roadmaps", "Bank statement import"],
     mealScan: true,
     schoolPath: false,
     lifeContext: true,
@@ -135,13 +314,12 @@ export const TIERS: Tier[] = [
     dailyMessages: 600,
     features: [
       "Everything in Plus",
-      "AXIS Prime — deepest reasoning engine",
-      "AI admission roadmaps per target school",
+            "AI admission roadmaps per target school",
       "Bank statement import — upload a statement, AXIS logs every transaction",
       "AXIS Motion — generate short videos with sound from a prompt",
       "600 AI messages a day",
     ],
-    locked: ["AXIS Oracle engine", "Unlimited messages"],
+    locked: ["Unlimited messages"],
     mealScan: true,
     schoolPath: true,
     lifeContext: true,
@@ -159,8 +337,7 @@ export const TIERS: Tier[] = [
     dailyMessages: null,
     features: [
       "Everything in Pro",
-      "AXIS Oracle — alternate frontier engine",
-      "Unlimited AI messages",
+            "Unlimited AI messages",
       "Priority handling on long analyses",
     ],
     locked: [],
