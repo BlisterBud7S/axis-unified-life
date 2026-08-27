@@ -2,13 +2,22 @@ import { Button } from "@/components/axis/Button";
 import { Input } from "@/components/axis/Field";
 import { axisChat, axisDocument, axisImage, axisVideoStart, axisVideoStatus } from "@/lib/ai.functions";
 import { downloadDocPdf, type DocSpec } from "@/lib/axis-doc";
+import {
+  createConversation,
+  deleteMessage,
+  deleteMessagesFrom,
+  insertMessage,
+  listMessages,
+  setConversationModel,
+  updateMessage,
+  type StoredMedia,
+} from "@/lib/conversations";
 import { useProfile } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import {
   DEFAULT_MODEL_ID,
   MODELS,
   MODEL_FAMILIES,
-
   canUseModel,
   effectiveTier,
   modelById,
@@ -19,19 +28,23 @@ import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
 import {
   Bot,
+  Check,
   Download,
   FileText,
   FileType2,
   Image as ImageIcon,
   Loader2,
   Paperclip,
+  Pencil,
+  RefreshCw,
   Send,
   Sparkles,
+  Trash2,
   User,
   Video,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 
 export type ChatAttachment =
@@ -44,14 +57,9 @@ export type ChatMessage = {
   content: string;
   attachments?: Array<{ kind: ChatAttachment["kind"]; name: string; previewUrl?: string }>;
   doc?: DocSpec;
-  media?: {
-    id: string;
-    kind: "image" | "video";
-    status: "processing" | "completed" | "failed";
-    url: string | null;
-    prompt: string;
-    error?: string;
-  };
+  media?: StoredMedia;
+  rowId?: string;
+  createdAt?: string;
 };
 
 type Mode = "chat" | "pdf" | "image" | "video";
@@ -97,21 +105,33 @@ const SUGGESTIONS = [
   "What should I do next for my top target school?",
 ];
 
+type SendInput = {
+  message: string;
+  attachments: ChatAttachment[];
+  history: Array<{ role: "user" | "assistant"; content: string }>;
+};
 
 export function AiChat({
   source,
   compact = false,
   className,
+  conversationId,
+  onConversationCreated,
+  onConversationTouched,
 }: {
   source: string;
   compact?: boolean;
   className?: string;
+  conversationId?: string | null;
+  onConversationCreated?: (id: string, title: string) => void;
+  onConversationTouched?: () => void;
 }) {
   const { data: profile } = useProfile();
   const qc = useQueryClient();
   const tier = effectiveTier(profile);
   const config = tierConfig(tier);
   const allowed = useMemo(() => MODELS.filter((m) => canUseModel(tier, m)), [tier]);
+  const persist = !!onConversationCreated;
 
   const [modelId, setModelId] = useState(DEFAULT_MODEL_ID);
   const [useContext, setUseContext] = useState(config.lifeContext);
@@ -121,8 +141,42 @@ export function AiChat({
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("chat");
   const [vertical, setVertical] = useState(false);
+  const [editing, setEditing] = useState<number | null>(null);
+  const [editDraft, setEditDraft] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const convRef = useRef<string | null>(conversationId ?? null);
+
+  useEffect(() => {
+    convRef.current = conversationId ?? null;
+    if (!persist) return;
+    setEditing(null);
+    setError(null);
+    if (!conversationId) {
+      setMessages([]);
+      return;
+    }
+    let live = true;
+    void listMessages(conversationId)
+      .then((rows) => {
+        if (!live) return;
+        setMessages(
+          rows.map((r) => ({
+            role: r.role === "assistant" ? "assistant" : "user",
+            content: r.content,
+            attachments: (Array.isArray(r.attachments) ? r.attachments : []) as ChatMessage["attachments"],
+            ...(r.doc ? { doc: r.doc as DocSpec } : {}),
+            ...(r.media ? { media: r.media as StoredMedia } : {}),
+            rowId: r.id,
+            createdAt: r.created_at,
+          })),
+        );
+      })
+      .catch((e: Error) => setError(e.message));
+    return () => {
+      live = false;
+    };
+  }, [conversationId, persist]);
 
   useEffect(() => {
     if (!allowed.some((m) => m.id === modelId)) {
@@ -138,38 +192,64 @@ export function AiChat({
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  /** Persist a message row and attach its id to the in-memory message. */
+  const store = useCallback(
+    async (index: number, message: ChatMessage) => {
+      const convId = convRef.current;
+      if (!persist || !convId) return;
+      try {
+        const row = await insertMessage(convId, {
+          role: message.role,
+          content: message.content,
+          ...(message.attachments ? { attachments: message.attachments } : {}),
+          ...(message.doc ? { doc: message.doc } : {}),
+          ...(message.media ? { media: message.media } : {}),
+        });
+        setMessages((m) =>
+          m.map((msg, i) => (i === index ? { ...msg, rowId: row.id, createdAt: row.created_at } : msg)),
+        );
+        onConversationTouched?.();
+      } catch (e) {
+        setError((e as Error).message);
+      }
+    },
+    [persist, onConversationTouched],
+  );
+
+  const pushAssistant = useCallback(
+    (message: ChatMessage) => {
+      setMessages((m) => {
+        void store(m.length, message);
+        return [...m, message];
+      });
+      qc.invalidateQueries({ queryKey: ["ai_chat_logs"] });
+    },
+    [store, qc],
+  );
+
   const chatFn = useServerFn(axisChat);
   const send = useMutation({
-    mutationFn: async (input: { message: string; attachments: ChatAttachment[] }) => {
-      const history = messages.map((m) => ({ role: m.role, content: m.content }));
-      const res = await chatFn({
+    mutationFn: async (input: SendInput) =>
+      chatFn({
         data: {
           message: input.message,
           modelId,
           useContext,
           source,
-          history,
+          history: input.history,
           attachments: input.attachments,
         },
-      });
-      return res;
-    },
-    onSuccess: (res) => {
-      setMessages((m) => [...m, { role: "assistant", content: res.reply }]);
-      qc.invalidateQueries({ queryKey: ["ai_chat_logs"] });
-    },
+      }),
+    onSuccess: (res) => pushAssistant({ role: "assistant", content: res.reply }),
     onError: (e: Error) => {
       setError(e.message);
-      setMessages((m) => [
-        ...m,
-        { role: "assistant", content: `⚠️ ${e.message}` },
-      ]);
+      pushAssistant({ role: "assistant", content: `⚠️ ${e.message}` });
     },
   });
 
   const docFn = useServerFn(axisDocument);
   const makeDoc = useMutation({
-    mutationFn: async (input: { message: string; attachments: ChatAttachment[] }) =>
+    mutationFn: async (input: SendInput) =>
       docFn({
         data: {
           prompt: input.message,
@@ -180,27 +260,22 @@ export function AiChat({
         },
       }),
     onSuccess: (res) => {
-      setMessages((m) => [
-        ...m,
-        {
-          role: "assistant",
-          content: `**${res.spec.title}**\n\n${res.spec.summary}`,
-          doc: res.spec,
-        },
-      ]);
-      qc.invalidateQueries({ queryKey: ["ai_chat_logs"] });
+      pushAssistant({
+        role: "assistant",
+        content: `**${res.spec.title}**\n\n${res.spec.summary}`,
+        doc: res.spec,
+      });
       void downloadDocPdf(res.spec);
     },
     onError: (e: Error) => {
       setError(e.message);
-      setMessages((m) => [...m, { role: "assistant", content: `\u26a0\ufe0f ${e.message}` }]);
+      pushAssistant({ role: "assistant", content: `\u26a0\ufe0f ${e.message}` });
     },
   });
 
-
   const imageFn = useServerFn(axisImage);
   const makeImage = useMutation({
-    mutationFn: async (input: { message: string; attachments: ChatAttachment[] }) => {
+    mutationFn: async (input: SendInput) => {
       const src = input.attachments.find((a) => a.kind === "image");
       return imageFn({
         data: {
@@ -211,16 +286,10 @@ export function AiChat({
         },
       });
     },
-    onSuccess: (res) => {
-      setMessages((m) => [
-        ...m,
-        { role: "assistant", content: "Here's your image.", media: res },
-      ]);
-      qc.invalidateQueries({ queryKey: ["ai_chat_logs"] });
-    },
+    onSuccess: (res) => pushAssistant({ role: "assistant", content: "Here's your image.", media: res }),
     onError: (e: Error) => {
       setError(e.message);
-      setMessages((m) => [...m, { role: "assistant", content: `\u26a0\ufe0f ${e.message}` }]);
+      pushAssistant({ role: "assistant", content: `\u26a0\ufe0f ${e.message}` });
     },
   });
 
@@ -234,20 +303,18 @@ export function AiChat({
       try {
         const res = await videoStatusFn({ data: { mediaId } });
         setMessages((m) =>
-          m.map((msg) =>
-            msg.media?.id === mediaId
-              ? {
-                  ...msg,
-                  content:
-                    res.status === "completed"
-                      ? "Here's your video."
-                      : res.status === "failed"
-                        ? `\u26a0\ufe0f ${res.error ?? "The video render failed."}`
-                        : msg.content,
-                  media: { ...msg.media, ...res },
-                }
-              : msg,
-          ),
+          m.map((msg) => {
+            if (msg.media?.id !== mediaId) return msg;
+            const content =
+              res.status === "completed"
+                ? "Here's your video."
+                : res.status === "failed"
+                  ? `\u26a0\ufe0f ${res.error ?? "The video render failed."}`
+                  : msg.content;
+            const media = { ...msg.media, ...res } as StoredMedia;
+            if (msg.rowId) void updateMessage(msg.rowId, { content, media });
+            return { ...msg, content, media };
+          }),
         );
         if (res.status === "processing" && tries < 40) setTimeout(() => void tick(), 8000);
       } catch (e) {
@@ -258,7 +325,7 @@ export function AiChat({
   }
 
   const makeVideo = useMutation({
-    mutationFn: async (input: { message: string; attachments: ChatAttachment[] }) => {
+    mutationFn: async (input: SendInput) => {
       const src = input.attachments.find((a) => a.kind === "image");
       return videoFn({
         data: {
@@ -271,20 +338,16 @@ export function AiChat({
       });
     },
     onSuccess: (res) => {
-      setMessages((m) => [
-        ...m,
-        {
-          role: "assistant",
-          content: "Rendering your video — this usually takes one to three minutes.",
-          media: res,
-        },
-      ]);
-      qc.invalidateQueries({ queryKey: ["ai_chat_logs"] });
+      pushAssistant({
+        role: "assistant",
+        content: "Rendering your video — this usually takes one to three minutes.",
+        media: res,
+      });
       pollVideo(res.id);
     },
     onError: (e: Error) => {
       setError(e.message);
-      setMessages((m) => [...m, { role: "assistant", content: `\u26a0\ufe0f ${e.message}` }]);
+      pushAssistant({ role: "assistant", content: `\u26a0\ufe0f ${e.message}` });
     },
   });
 
@@ -306,30 +369,95 @@ export function AiChat({
     if (next.length) setPending((p) => [...p, ...next]);
   }
 
+  async function run(message: string, attachments: ChatAttachment[], base: ChatMessage[]) {
+    if (persist && !convRef.current) {
+      try {
+        const conv = await createConversation({ title: message, modelId });
+        convRef.current = conv.id;
+        onConversationCreated?.(conv.id, conv.title);
+      } catch (e) {
+        setError((e as Error).message);
+        return;
+      }
+    }
+    const userMessage: ChatMessage = {
+      role: "user",
+      content: message,
+      attachments: attachments.map((a) => ({
+        kind: a.kind,
+        name: a.name,
+        ...(a.kind === "image" ? { previewUrl: a.dataUrl } : {}),
+      })),
+    };
+    setMessages([...base, userMessage]);
+    void store(base.length, userMessage);
+
+    const history = base.map((m) => ({ role: m.role, content: m.content }));
+    const input: SendInput = { message, attachments, history };
+    if (mode === "pdf") makeDoc.mutate(input);
+    else if (mode === "image") makeImage.mutate(input);
+    else if (mode === "video") makeVideo.mutate(input);
+    else send.mutate(input);
+  }
+
   function submit(text: string, attachments: ChatAttachment[] = pending) {
     const message = text.trim() || (attachments.length ? "Have a look at this." : "");
     if (!message || busy) return;
     setError(null);
-    setMessages((m) => [
-      ...m,
-      {
-        role: "user",
-        content: message,
-        attachments: attachments.map((a) => ({
-          kind: a.kind,
-          name: a.name,
-          ...(a.kind === "image" ? { previewUrl: a.dataUrl } : {}),
-        })),
-      },
-    ]);
     setDraft("");
     setPending([]);
-    if (mode === "pdf") makeDoc.mutate({ message, attachments });
-    else if (mode === "image") makeImage.mutate({ message, attachments });
-    else if (mode === "video") makeVideo.mutate({ message, attachments });
-    else send.mutate({ message, attachments });
+    void run(message, attachments, messages);
   }
 
+  /** Rewrite a user message and re-run the conversation from that point. */
+  async function saveEdit(index: number) {
+    const text = editDraft.trim();
+    const target = messages[index];
+    if (!text || !target || busy) return;
+    setEditing(null);
+    setError(null);
+    const base = messages.slice(0, index);
+    if (persist && convRef.current && target.createdAt) {
+      try {
+        await deleteMessagesFrom(convRef.current, target.createdAt);
+      } catch (e) {
+        setError((e as Error).message);
+      }
+    }
+    await run(text, [], base);
+  }
+
+  /** Re-ask the last question. */
+  async function regenerate() {
+    if (busy) return;
+    const lastUser = [...messages].reverse().find((m) => m.role === "user");
+    if (!lastUser) return;
+    const index = messages.lastIndexOf(lastUser);
+    setError(null);
+    const base = messages.slice(0, index);
+    if (persist && convRef.current && lastUser.createdAt) {
+      try {
+        await deleteMessagesFrom(convRef.current, lastUser.createdAt);
+      } catch (e) {
+        setError((e as Error).message);
+      }
+    }
+    await run(lastUser.content, [], base);
+  }
+
+  async function removeMessage(index: number) {
+    const target = messages[index];
+    if (!target) return;
+    setMessages((m) => m.filter((_, i) => i !== index));
+    if (persist && target.rowId) {
+      try {
+        await deleteMessage(target.rowId);
+        onConversationTouched?.();
+      } catch (e) {
+        setError((e as Error).message);
+      }
+    }
+  }
 
   const active = modelById(modelId);
 
@@ -339,7 +467,10 @@ export function AiChat({
         <select
           aria-label="AI engine"
           value={modelId}
-          onChange={(e) => setModelId(e.target.value)}
+          onChange={(e) => {
+            setModelId(e.target.value);
+            if (persist && convRef.current) void setConversationModel(convRef.current, e.target.value);
+          }}
           className="h-8 rounded-lg border border-border bg-secondary/40 px-2 text-xs text-foreground"
         >
           {MODEL_FAMILIES.map((family) => (
@@ -352,7 +483,6 @@ export function AiChat({
               ))}
             </optgroup>
           ))}
-
         </select>
         <button
           onClick={() => config.lifeContext && setUseContext((v) => !v)}
@@ -433,7 +563,7 @@ export function AiChat({
               {SUGGESTIONS.map((s) => (
                 <button
                   key={s}
-                  onClick={() => submit(s)}
+                  onClick={() => submit(s, [])}
                   className="rounded-lg border border-border px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
                 >
                   {s}
@@ -443,7 +573,7 @@ export function AiChat({
           </div>
         ) : (
           messages.map((m, i) => (
-            <div key={i} className="flex gap-2.5">
+            <div key={m.rowId ?? i} className="group flex gap-2.5">
               <div
                 className={cn(
                   "mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg",
@@ -475,9 +605,29 @@ export function AiChat({
                     )}
                   </div>
                 ) : null}
-                <div className="prose prose-invert prose-sm max-w-none prose-p:my-1.5 prose-ul:my-1.5 prose-headings:mt-3 prose-headings:mb-1">
-                  <ReactMarkdown>{m.content}</ReactMarkdown>
-                </div>
+                {editing === i ? (
+                  <div className="space-y-2">
+                    <textarea
+                      value={editDraft}
+                      onChange={(e) => setEditDraft(e.target.value)}
+                      rows={3}
+                      aria-label="Edit message"
+                      className="w-full rounded-xl border border-primary/50 bg-secondary/40 p-2.5 text-sm text-foreground outline-none"
+                    />
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={() => void saveEdit(i)} disabled={busy}>
+                        <Check className="h-3.5 w-3.5" /> Save &amp; re-run
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="prose prose-invert prose-sm max-w-none prose-p:my-1.5 prose-ul:my-1.5 prose-headings:mt-3 prose-headings:mb-1">
+                    <ReactMarkdown>{m.content}</ReactMarkdown>
+                  </div>
+                )}
                 {m.doc ? (
                   <div className="mt-2 flex items-center gap-3 rounded-xl border border-primary/40 bg-primary/10 p-3">
                     <FileType2 className="h-5 w-5 shrink-0 text-primary" />
@@ -533,6 +683,43 @@ export function AiChat({
                     ) : null}
                   </div>
                 ) : null}
+                {editing === i ? null : (
+                  <div className="mt-1.5 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                    {m.role === "user" ? (
+                      <button
+                        type="button"
+                        title="Edit this message and re-run"
+                        aria-label="Edit message"
+                        onClick={() => {
+                          setEditing(i);
+                          setEditDraft(m.content);
+                        }}
+                        className="rounded-md p-1 text-muted-foreground hover:text-foreground"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        title="Regenerate this answer"
+                        aria-label="Regenerate answer"
+                        onClick={() => void regenerate()}
+                        className="rounded-md p-1 text-muted-foreground hover:text-foreground"
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      title="Delete this message"
+                      aria-label="Delete message"
+                      onClick={() => void removeMessage(i)}
+                      className="rounded-md p-1 text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))
@@ -650,4 +837,3 @@ export function AiChat({
     </div>
   );
 }
-
