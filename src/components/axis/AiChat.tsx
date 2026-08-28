@@ -164,7 +164,9 @@ export function AiChat({
           rows.map((r) => ({
             role: r.role === "assistant" ? "assistant" : "user",
             content: r.content,
-            attachments: (Array.isArray(r.attachments) ? r.attachments : []) as ChatMessage["attachments"],
+            attachments: (Array.isArray(r.attachments)
+              ? r.attachments
+              : []) as NonNullable<ChatMessage["attachments"]>,
             ...(r.doc ? { doc: r.doc as DocSpec } : {}),
             ...(r.media ? { media: r.media as StoredMedia } : {}),
             rowId: r.id,
