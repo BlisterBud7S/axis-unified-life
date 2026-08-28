@@ -62,10 +62,17 @@ async function readSse(res: Response, onDelta?: (chunk: string) => void) {
 
 async function fail(res: Response): Promise<never> {
   const body = await res.text();
-  if (res.status === 429) throw new Error("AI is rate limited right now — try again in a moment.");
-  if (res.status === 402) throw new Error("AI credits are exhausted for this workspace.");
+  if (res.status === 429) throw new Error("AI is busy right now — wait a few seconds and try again.");
+  if (res.status === 402)
+    throw new Error(
+      "AXIS AI has run out of monthly AI credits. The workspace owner needs to top up AI credits in Lovable — nothing is wrong with your account or plan.",
+    );
+  if (res.status === 403)
+    throw new Error("AI access is blocked for this workspace right now. The owner needs to re-enable it or raise the AI credit limit.");
+  if (res.status === 401) throw new Error("AI is not configured correctly on this project (missing key).");
   throw new Error(`AI request failed [${res.status}]: ${body.slice(0, 400)}`);
 }
+
 
 /**
  * One entry point for every AXIS AI call.
