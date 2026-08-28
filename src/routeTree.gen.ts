@@ -16,6 +16,7 @@ import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as AuthenticatedAiRouteImport } from './routes/_authenticated/ai'
 import { Route as AuthenticatedAiHistoryRouteImport } from './routes/_authenticated/ai-history'
 import { Route as AuthenticatedCodeRouteImport } from './routes/_authenticated/code'
+import { Route as AuthenticatedConnectionsRouteImport } from './routes/_authenticated/connections'
 import { Route as AuthenticatedFinanceRouteImport } from './routes/_authenticated/finance'
 import { Route as AuthenticatedHealthRouteImport } from './routes/_authenticated/health'
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
@@ -67,6 +68,12 @@ const AuthenticatedCodeRoute = AuthenticatedCodeRouteImport.update({
   path: '/code',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedConnectionsRoute =
+  AuthenticatedConnectionsRouteImport.update({
+    id: '/connections',
+    path: '/connections',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedFinanceRoute = AuthenticatedFinanceRouteImport.update({
   id: '/finance',
   path: '/finance',
@@ -157,6 +164,7 @@ export interface FileRoutesByFullPath {
   '/ai': typeof AuthenticatedAiRoute
   '/ai-history': typeof AuthenticatedAiHistoryRoute
   '/code': typeof AuthenticatedCodeRoute
+  '/connections': typeof AuthenticatedConnectionsRoute
   '/finance': typeof AuthenticatedFinanceRoute
   '/health': typeof AuthenticatedHealthRoute
   '/home': typeof AuthenticatedHomeRoute
@@ -181,6 +189,7 @@ export interface FileRoutesByTo {
   '/ai': typeof AuthenticatedAiRoute
   '/ai-history': typeof AuthenticatedAiHistoryRoute
   '/code': typeof AuthenticatedCodeRoute
+  '/connections': typeof AuthenticatedConnectionsRoute
   '/finance': typeof AuthenticatedFinanceRoute
   '/health': typeof AuthenticatedHealthRoute
   '/home': typeof AuthenticatedHomeRoute
@@ -207,6 +216,7 @@ export interface FileRoutesById {
   '/_authenticated/ai': typeof AuthenticatedAiRoute
   '/_authenticated/ai-history': typeof AuthenticatedAiHistoryRoute
   '/_authenticated/code': typeof AuthenticatedCodeRoute
+  '/_authenticated/connections': typeof AuthenticatedConnectionsRoute
   '/_authenticated/finance': typeof AuthenticatedFinanceRoute
   '/_authenticated/health': typeof AuthenticatedHealthRoute
   '/_authenticated/home': typeof AuthenticatedHomeRoute
@@ -233,6 +243,7 @@ export interface FileRouteTypes {
     | '/ai'
     | '/ai-history'
     | '/code'
+    | '/connections'
     | '/finance'
     | '/health'
     | '/home'
@@ -257,6 +268,7 @@ export interface FileRouteTypes {
     | '/ai'
     | '/ai-history'
     | '/code'
+    | '/connections'
     | '/finance'
     | '/health'
     | '/home'
@@ -282,6 +294,7 @@ export interface FileRouteTypes {
     | '/_authenticated/ai'
     | '/_authenticated/ai-history'
     | '/_authenticated/code'
+    | '/_authenticated/connections'
     | '/_authenticated/finance'
     | '/_authenticated/health'
     | '/_authenticated/home'
@@ -363,6 +376,13 @@ declare module '@tanstack/react-router' {
       path: '/code'
       fullPath: '/code'
       preLoaderRoute: typeof AuthenticatedCodeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/connections': {
+      id: '/_authenticated/connections'
+      path: '/connections'
+      fullPath: '/connections'
+      preLoaderRoute: typeof AuthenticatedConnectionsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/finance': {
@@ -484,6 +504,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAiRoute: typeof AuthenticatedAiRoute
   AuthenticatedAiHistoryRoute: typeof AuthenticatedAiHistoryRoute
   AuthenticatedCodeRoute: typeof AuthenticatedCodeRoute
+  AuthenticatedConnectionsRoute: typeof AuthenticatedConnectionsRoute
   AuthenticatedFinanceRoute: typeof AuthenticatedFinanceRoute
   AuthenticatedHealthRoute: typeof AuthenticatedHealthRoute
   AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
@@ -499,6 +520,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAiRoute: AuthenticatedAiRoute,
   AuthenticatedAiHistoryRoute: AuthenticatedAiHistoryRoute,
   AuthenticatedCodeRoute: AuthenticatedCodeRoute,
+  AuthenticatedConnectionsRoute: AuthenticatedConnectionsRoute,
   AuthenticatedFinanceRoute: AuthenticatedFinanceRoute,
   AuthenticatedHealthRoute: AuthenticatedHealthRoute,
   AuthenticatedHomeRoute: AuthenticatedHomeRoute,
