@@ -15,6 +15,25 @@ function requireEnv(name: string): string {
   return v;
 }
 
+function envOrNull(name: string): string | null {
+  return process.env[name] ?? null;
+}
+
+async function resolveKey(
+  provider: "openai" | "anthropic" | "google",
+  userId?: string,
+): Promise<string> {
+  if (userId) {
+    const { getUserAiKey } = await import("@/lib/connections.functions");
+    const userKey = await getUserAiKey(userId, provider);
+    if (userKey) return userKey;
+  }
+  const envMap = { openai: "OPENAI_API_KEY", anthropic: "ANTHROPIC_API_KEY", google: "GOOGLE_AI_API_KEY" };
+  const key = envOrNull(envMap[provider]);
+  if (!key) throw new Error(`No ${provider} API key configured. Add your own key in Connections, or ask the site owner to set ${envMap[provider]}.`);
+  return key;
+}
+
 async function readSse(res: Response) {
   const reader = res.body?.getReader();
   if (!reader) throw new Error("AI returned an empty response.");
@@ -82,11 +101,12 @@ export async function runModel(opts: {
   model: string;
   messages: AxisMessage[];
   jsonSchema?: JsonSchema;
+  userId?: string;
 }): Promise<string> {
-  const { model, messages, jsonSchema } = opts;
+  const { model, messages, jsonSchema, userId } = opts;
 
   if (model.startsWith("anthropic/")) {
-    const apiKey = requireEnv("ANTHROPIC_API_KEY");
+    const apiKey = await resolveKey("anthropic", userId);
     const modelId = model.replace("anthropic/", "");
 
     const system = messages.filter((m) => m.role === "system").map((m) =>
@@ -135,7 +155,7 @@ export async function runModel(opts: {
   }
 
   if (model.startsWith("openai/")) {
-    const apiKey = requireEnv("OPENAI_API_KEY");
+    const apiKey = await resolveKey("openai", userId);
     const modelId = model.replace("openai/", "");
 
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -163,7 +183,7 @@ export async function runModel(opts: {
   }
 
   if (model.startsWith("google/")) {
-    const apiKey = requireEnv("GOOGLE_AI_API_KEY");
+    const apiKey = await resolveKey("google", userId);
     const modelId = model.replace("google/", "");
 
     const contents = messages

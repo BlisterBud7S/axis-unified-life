@@ -758,6 +758,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_connections: {
+        Row: {
+          id: string
+          user_id: string
+          connector_id: string
+          api_key: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          connector_id: string
+          api_key: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          connector_id?: string
+          api_key?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           country_code: string | null
