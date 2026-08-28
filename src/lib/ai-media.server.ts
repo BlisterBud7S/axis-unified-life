@@ -1,28 +1,19 @@
 import { resolveAccess, logChat, type Client } from "@/lib/axis-ai.server";
 
-const GATEWAY = "https://ai.gateway.lovable.dev/v1";
-const IMAGE_MODEL = "google/gemini-3-pro-image";
-const VIDEO_MODEL = "google/veo-3.1-lite";
+const IMAGE_MODEL = "gemini-3-pro-image";
+const VIDEO_MODEL = "veo-3.1-lite";
 const BUCKET = "ai-media";
 
-function key() {
-  const k = process.env["LOVABLE_API_KEY"];
-  if (!k) throw new Error("AI is not configured on this project yet.");
+function googleKey() {
+  const k = process.env["GOOGLE_AI_API_KEY"];
+  if (!k) throw new Error("Missing GOOGLE_AI_API_KEY environment variable.");
   return k;
-}
-
-function authHeaders() {
-  return {
-    Authorization: `Bearer ${key()}`,
-    "Content-Type": "application/json",
-    "X-Lovable-AIG-SDK": "fetch",
-  };
 }
 
 async function gatewayError(res: Response): Promise<never> {
   const body = await res.text();
   if (res.status === 429) throw new Error("AXIS Vision is busy right now — try again in a moment.");
-  if (res.status === 402) throw new Error("AI credits are exhausted for this workspace.");
+  if (res.status === 402) throw new Error("API quota exhausted — check your billing dashboard.");
   let message = body.slice(0, 300);
   try {
     const parsed = JSON.parse(body) as { message?: string; error?: { message?: string } };
@@ -48,7 +39,6 @@ export type MediaResult = {
   error?: string;
 };
 
-/** Text-to-image (and image editing when a source image is attached). */
 export async function generateImage(opts: {
   supabase: Client;
   userId: string;
@@ -59,31 +49,40 @@ export async function generateImage(opts: {
 }) {
   await resolveAccess(opts.supabase, opts.userId, opts.modelId, "imageGen");
 
-  const content: Array<Record<string, unknown>> = [
+  const parts: Array<Record<string, unknown>> = [
     {
-      type: "text",
       text: opts.aspect
         ? `${opts.prompt}\n\nCompose the image in a ${opts.aspect} aspect ratio.`
         : opts.prompt,
     },
   ];
   if (opts.sourceImageDataUrl) {
-    content.push({ type: "image_url", image_url: { url: opts.sourceImageDataUrl } });
+    const match = opts.sourceImageDataUrl.match(/^data:(image\/[^;]+);base64,(.+)$/);
+    if (match) {
+      parts.push({ inlineData: { mimeType: match[1], data: match[2] } });
+    }
   }
 
-  const res = await fetch(`${GATEWAY}/images/generations`, {
-    method: "POST",
-    headers: authHeaders(),
-    body: JSON.stringify({
-      model: IMAGE_MODEL,
-      messages: [{ role: "user", content }],
-      modalities: ["image", "text"],
-    }),
-  });
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_MODEL}:generateContent?key=${googleKey()}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts }],
+        generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
+      }),
+    },
+  );
   if (!res.ok) await gatewayError(res);
 
-  const json = (await res.json()) as { data?: Array<{ b64_json?: string }> };
-  const b64 = json.data?.[0]?.b64_json;
+  const json = (await res.json()) as {
+    candidates?: Array<{
+      content?: { parts?: Array<{ inlineData?: { mimeType?: string; data?: string } }> };
+    }>;
+  };
+  const imagePart = json.candidates?.[0]?.content?.parts?.find((p) => p.inlineData?.data);
+  const b64 = imagePart?.inlineData?.data;
   if (!b64) throw new Error("The image engine returned no image — try rewording the prompt.");
 
   const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
@@ -125,7 +124,6 @@ export async function generateImage(opts: {
   } satisfies MediaResult;
 }
 
-/** Kick off a video job. Videos take 1-3 minutes, so the client polls videoStatus. */
 export async function startVideo(opts: {
   supabase: Client;
   userId: string;
@@ -146,20 +144,34 @@ export async function startVideo(opts: {
     throw new Error("One video is already rendering — wait for it to finish before starting another.");
   }
 
-  const res = await fetch(`${GATEWAY}/videos`, {
-    method: "POST",
-    headers: authHeaders(),
-    body: JSON.stringify({
-      model: VIDEO_MODEL,
-      prompt: opts.prompt,
-      seconds: String(opts.seconds ?? 8),
-      size: opts.vertical ? "720x1280" : "1280x720",
-      ...(opts.sourceImageDataUrl ? { input_reference: opts.sourceImageDataUrl } : {}),
-    }),
-  });
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${VIDEO_MODEL}:predictLongRunning?key=${googleKey()}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        instances: [
+          {
+            prompt: opts.prompt,
+            ...(opts.sourceImageDataUrl
+              ? (() => {
+                  const match = opts.sourceImageDataUrl.match(/^data:(image\/[^;]+);base64,(.+)$/);
+                  return match ? { image: { bytesBase64Encoded: match[2] } } : {};
+                })()
+              : {}),
+          },
+        ],
+        parameters: {
+          sampleCount: 1,
+          durationSeconds: opts.seconds ?? 8,
+          aspectRatio: opts.vertical ? "9:16" : "16:9",
+        },
+      }),
+    },
+  );
   if (!res.ok) await gatewayError(res);
 
-  const job = (await res.json()) as { id: string };
+  const job = (await res.json()) as { name: string };
 
   const { data: row, error } = await opts.supabase
     .from("ai_media")
@@ -169,7 +181,7 @@ export async function startVideo(opts: {
       prompt: opts.prompt.slice(0, 4000),
       engine: "AXIS Motion",
       status: "processing",
-      job_id: job.id,
+      job_id: job.name,
       seconds: opts.seconds ?? 8,
       aspect: opts.vertical ? "9:16" : "16:9",
     })
@@ -188,7 +200,6 @@ export async function startVideo(opts: {
   return { id: row.id, kind: "video" as const, status: "processing" as const, url: null, prompt: opts.prompt } satisfies MediaResult;
 }
 
-/** Poll a video job; stores the MP4 permanently once it is ready. */
 export async function videoStatus(opts: {
   supabase: Client;
   userId: string;
@@ -223,15 +234,19 @@ export async function videoStatus(opts: {
   }
   if (!row.job_id) throw new Error("That video render is missing its job reference.");
 
-  const jobRes = await fetch(`${GATEWAY}/videos/${row.job_id}`, { headers: authHeaders() });
+  const jobRes = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/${row.job_id}?key=${googleKey()}`,
+    { method: "GET" },
+  );
   if (!jobRes.ok) await gatewayError(jobRes);
   const job = (await jobRes.json()) as {
-    status: string;
+    done?: boolean;
     error?: { message?: string };
+    response?: { videos?: Array<{ bytesBase64Encoded?: string }> };
   };
 
-  if (job.status === "failed") {
-    const message = job.error?.message ?? "The video render failed.";
+  if (job.error) {
+    const message = job.error.message ?? "The video render failed.";
     await opts.supabase
       .from("ai_media")
       .update({ status: "failed", error_message: message.slice(0, 500), updated_at: new Date().toISOString() })
@@ -239,16 +254,16 @@ export async function videoStatus(opts: {
     return { id: row.id, kind: "video", status: "failed", url: null, prompt: row.prompt, error: message };
   }
 
-  if (job.status !== "completed") {
+  if (!job.done) {
     return { id: row.id, kind: "video", status: "processing", url: null, prompt: row.prompt };
   }
 
-  const contentRes = await fetch(`${GATEWAY}/videos/${row.job_id}/content`, {
-    headers: { Authorization: `Bearer ${key()}` },
-  });
-  if (!contentRes.ok) await gatewayError(contentRes);
-  const mp4 = new Uint8Array(await contentRes.arrayBuffer());
+  const videoB64 = job.response?.videos?.[0]?.bytesBase64Encoded;
+  if (!videoB64) {
+    throw new Error("Video completed but no data was returned.");
+  }
 
+  const mp4 = Uint8Array.from(atob(videoB64), (c) => c.charCodeAt(0));
   const path = `${opts.userId}/videos/${row.id}.mp4`;
   const { error: upErr } = await opts.supabase.storage
     .from(BUCKET)

@@ -108,11 +108,11 @@ function AiHub() {
 
     for (const c of filtered) {
       const d = new Date(c.updated_at);
-      if (d.toDateString() === today.toDateString()) groups[0].items.push(c);
-      else if (d.toDateString() === yesterday.toDateString()) groups[1].items.push(c);
-      else if (d > weekAgo) groups[2].items.push(c);
-      else if (d > monthAgo) groups[3].items.push(c);
-      else groups[4].items.push(c);
+      if (d.toDateString() === today.toDateString()) groups[0]!.items.push(c);
+      else if (d.toDateString() === yesterday.toDateString()) groups[1]!.items.push(c);
+      else if (d > weekAgo) groups[2]!.items.push(c);
+      else if (d > monthAgo) groups[3]!.items.push(c);
+      else groups[4]!.items.push(c);
     }
 
     return groups.filter((g) => g.items.length > 0);
