@@ -163,6 +163,62 @@ export const MODELS: AxisModel[] = [
     family: "Sol line",
   },
 
+  // ---- Claude line (Anthropic) ----
+  {
+    id: "claude-opus-5",
+    name: "AXIS Apex Opus",
+    tagline: "Most capable — deep analysis, creative writing and complex reasoning",
+    underlying: "anthropic/claude-opus-5",
+    minTier: "free",
+    vision: true,
+    family: "Apex line",
+  },
+  {
+    id: "claude-sonnet-5",
+    name: "AXIS Apex Sonnet",
+    tagline: "Best balance of speed and intelligence for everyday work",
+    underlying: "anthropic/claude-sonnet-5",
+    minTier: "free",
+    vision: true,
+    family: "Apex line",
+  },
+  {
+    id: "claude-haiku-4-5",
+    name: "AXIS Apex Haiku",
+    tagline: "Fastest Claude engine — instant answers at low cost",
+    underlying: "anthropic/claude-haiku-4-5-20251001",
+    minTier: "free",
+    vision: true,
+    family: "Apex line",
+  },
+  {
+    id: "claude-fable-5",
+    name: "AXIS Apex Fable",
+    tagline: "Creative storytelling and nuanced content generation",
+    underlying: "anthropic/claude-fable-5",
+    minTier: "free",
+    vision: true,
+    family: "Apex line",
+  },
+  {
+    id: "claude-opus-4",
+    name: "AXIS Apex Opus 4",
+    tagline: "Previous-gen powerhouse for complex tasks",
+    underlying: "anthropic/claude-opus-4-0-20250514",
+    minTier: "free",
+    vision: true,
+    family: "Apex line",
+  },
+  {
+    id: "claude-sonnet-4",
+    name: "AXIS Apex Sonnet 4",
+    tagline: "Reliable balanced engine for code and analysis",
+    underlying: "anthropic/claude-sonnet-4-0-20250514",
+    minTier: "free",
+    vision: true,
+    family: "Apex line",
+  },
+
   // ---- Gemini line ----
   {
     id: "gem-3-7-flash",
@@ -229,7 +285,7 @@ export const MODELS: AxisModel[] = [
   },
 ];
 
-export const MODEL_FAMILIES = ["AXIS Signature", "Sol line", "Nova line"] as const;
+export const MODEL_FAMILIES = ["AXIS Signature", "Apex line", "Sol line", "Nova line"] as const;
 
 export const DEFAULT_MODEL_ID = "axis-prime";
 
@@ -261,7 +317,7 @@ export const TIERS: Tier[] = [
     dailyMessages: 15,
     features: [
       "Tasks, habits, finance, health and school tracking",
-      "All 22 AXIS AI engines",
+      "All 28 AXIS AI engines",
       "15 AI messages a day",
     ],
     locked: [
@@ -288,7 +344,7 @@ export const TIERS: Tier[] = [
     dailyMessages: 150,
     features: [
       "Everything in Free",
-      "All 22 AXIS AI engines",
+      "All 28 AXIS AI engines",
       "150 AI messages a day",
       "Meal photo scanning with calorie estimates",
       "Personal context in AI answers",

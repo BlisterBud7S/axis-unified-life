@@ -1,32 +1,29 @@
 export type PaddleEnv = "sandbox" | "live";
 
-const GATEWAY_URL = "https://gateway.lovable.dev/paddle";
+const PADDLE_URLS: Record<PaddleEnv, string> = {
+  sandbox: "https://sandbox-api.paddle.com",
+  live: "https://api.paddle.com",
+};
 
-function connectionKey(env: PaddleEnv) {
+function apiKey(env: PaddleEnv) {
   const key =
     env === "live" ? process.env["PADDLE_LIVE_API_KEY"] : process.env["PADDLE_SANDBOX_API_KEY"];
-  if (!key) throw new Error(`Missing Paddle connection key for ${env}`);
+  if (!key) throw new Error(`Missing Paddle API key for ${env}`);
   return key;
 }
 
-/** Authenticated call to the Paddle API through the Lovable connector gateway. */
 export async function gatewayFetch(
   env: PaddleEnv,
   path: string,
   init: RequestInit = {},
 ): Promise<Response> {
-  const lovableKey = process.env["LOVABLE_API_KEY"];
-  if (!lovableKey) throw new Error("Missing LOVABLE_API_KEY");
-
   const headers = new Headers(init.headers);
-  headers.set("Lovable-API-Key", lovableKey);
-  headers.set("X-Connection-Api-Key", connectionKey(env));
+  headers.set("Authorization", `Bearer ${apiKey(env)}`);
   if (init.body && !headers.has("content-type")) {
     headers.set("content-type", "application/json");
   }
 
-  const res = await fetch(`${GATEWAY_URL}${path}`, { ...init, headers });
-  return res;
+  return fetch(`${PADDLE_URLS[env]}${path}`, { ...init, headers });
 }
 
 export async function paddleRequest<T = any>(
@@ -55,10 +52,6 @@ function timingSafeEqual(a: Uint8Array, b: Uint8Array) {
   return diff === 0;
 }
 
-/**
- * Verifies the `Paddle-Signature` header (ts=...;h1=...) and returns the parsed
- * webhook event. Throws when the signature does not match.
- */
 export async function verifyWebhook(request: Request, env: PaddleEnv): Promise<any> {
   const secret =
     env === "live"
