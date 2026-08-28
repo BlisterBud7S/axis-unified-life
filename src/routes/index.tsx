@@ -7,6 +7,7 @@ import {
   GraduationCap,
   HeartPulse,
   ListChecks,
+  Plug,
   Wallet,
 } from "lucide-react";
 
@@ -51,7 +52,7 @@ const pillars = [
   {
     icon: Brain,
     title: "AI Hub",
-    body: "Multiple AXIS engines, attachments (images, PDFs, code), designed PDF documents and a searchable history of every chat.",
+    body: "28+ AI engines including Claude, GPT and Gemini. Persistent conversations you can edit and revisit, attachments, PDF generation, image and video creation.",
   },
 ];
 
@@ -96,10 +97,39 @@ function LandingPage() {
       </section>
 
       <section className="mt-16">
+        <h2 className="text-2xl font-semibold text-foreground">Connected to everything</h2>
+        <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
+          AXIS links to the apps you already use — Google Drive, Docs, Sheets, Outlook, OneDrive,
+          GitHub, Notion, Slack, Claude, ChatGPT and more. Pull context from your files, mail and
+          calendars so AXIS can give answers grounded in your real data.
+        </p>
+        <div className="mt-5 flex flex-wrap gap-2">
+          {[
+            "Google Drive", "Google Docs", "Google Sheets", "Gmail", "Google Calendar",
+            "Outlook", "OneDrive", "Word", "Excel", "Teams",
+            "GitHub", "GitLab", "Notion", "Slack", "Linear",
+            "Claude", "ChatGPT", "Gemini", "Perplexity",
+            "Oura", "Fitbit", "Apple Health",
+          ].map((name) => (
+            <span
+              key={name}
+              className="flex items-center gap-1.5 rounded-lg border border-border bg-secondary/30 px-2.5 py-1.5 text-xs text-muted-foreground"
+            >
+              <Plug className="h-3 w-3 text-primary" />
+              {name}
+            </span>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-16">
         <h2 className="text-2xl font-semibold text-foreground">What you get on every plan</h2>
         <ul className="mt-5 grid gap-2 sm:grid-cols-2">
           {[
             "Tasks, habits, finance, health and school tracking",
+            "28+ AI engines — Claude, GPT, Gemini and AXIS originals",
+            "Persistent, editable AI conversations like Claude",
+            "Connect Google, Microsoft, GitHub, Slack and more",
             "Dark, distraction-free dashboard on desktop and mobile",
             "AI assistant available from every screen",
             "Installable app with offline viewing of your data",

@@ -1,12 +1,26 @@
-import { Card } from "@/components/axis/Card";
+import { Card, CardTitle } from "@/components/axis/Card";
 import { Header } from "@/components/axis/Header";
 import { Input } from "@/components/axis/Field";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import {
+  listConversations,
+  deleteConversation,
+  type ConversationRow,
+} from "@/lib/conversations";
+import { modelById } from "@/lib/tiers";
 import { cn } from "@/lib/utils";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { Bot, ChevronDown, MessageSquare, User } from "lucide-react";
+import {
+  Bot,
+  ChevronDown,
+  ExternalLink,
+  MessageCircle,
+  MessageSquare,
+  Trash2,
+  User,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 
@@ -49,13 +63,23 @@ function dayLabel(iso: string) {
   return d.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
 }
 
+type Tab = "conversations" | "logs";
+
 function AiHistory() {
   const { user } = useAuth();
+  const qc = useQueryClient();
+  const [tab, setTab] = useState<Tab>("conversations");
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
   const [source, setSource] = useState("all");
 
-  const { data: logs, isLoading } = useQuery({
+  const { data: conversations, isLoading: loadingConvs } = useQuery({
+    queryKey: ["ai_conversations", user?.id],
+    enabled: !!user,
+    queryFn: listConversations,
+  });
+
+  const { data: logs, isLoading: loadingLogs } = useQuery({
     queryKey: ["ai_chat_logs", "history", user?.id],
     enabled: !!user,
     queryFn: async () => {
@@ -74,7 +98,7 @@ function AiHistory() {
     [logs],
   );
 
-  const filtered = useMemo(() => {
+  const filteredLogs = useMemo(() => {
     const q = query.trim().toLowerCase();
     return (logs ?? []).filter((l) => {
       if (source !== "all" && l.source !== source) return false;
@@ -83,14 +107,36 @@ function AiHistory() {
     });
   }, [logs, query, source]);
 
-  const groups = useMemo(() => {
-    const map = new Map<string, typeof filtered>();
-    for (const l of filtered) {
+  const filteredConvs = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return conversations ?? [];
+    return (conversations ?? []).filter((c) => c.title.toLowerCase().includes(q));
+  }, [conversations, query]);
+
+  const logGroups = useMemo(() => {
+    const map = new Map<string, typeof filteredLogs>();
+    for (const l of filteredLogs) {
       const k = dayLabel(l.created_at);
       map.set(k, [...(map.get(k) ?? []), l]);
     }
     return Array.from(map.entries());
-  }, [filtered]);
+  }, [filteredLogs]);
+
+  const convGroups = useMemo(() => {
+    const map = new Map<string, ConversationRow[]>();
+    for (const c of filteredConvs) {
+      const k = dayLabel(c.updated_at);
+      map.set(k, [...(map.get(k) ?? []), c]);
+    }
+    return Array.from(map.entries());
+  }, [filteredConvs]);
+
+  async function handleDeleteConv(id: string) {
+    try {
+      await deleteConversation(id);
+      qc.invalidateQueries({ queryKey: ["ai_conversations"] });
+    } catch {}
+  }
 
   return (
     <>
@@ -109,38 +155,130 @@ function AiHistory() {
 
       <Card className="mb-5">
         <div className="flex flex-wrap items-center gap-3">
+          <div className="flex gap-1 rounded-xl border border-border p-1">
+            {(["conversations", "logs"] as Tab[]).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={cn(
+                  "rounded-lg px-3 py-1.5 text-xs font-medium capitalize transition-colors",
+                  tab === t
+                    ? "bg-primary/15 text-primary"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {t === "conversations" ? "Conversations" : "Activity log"}
+              </button>
+            ))}
+          </div>
           <div className="min-w-[220px] flex-1">
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search your questions and answers…"
+              placeholder={
+                tab === "conversations"
+                  ? "Search conversations…"
+                  : "Search your questions and answers…"
+              }
               aria-label="Search AI history"
             />
           </div>
-          <select
-            aria-label="Filter by source"
-            value={source}
-            onChange={(e) => setSource(e.target.value)}
-            className="h-10 rounded-xl border border-border bg-secondary/40 px-3 text-sm text-foreground"
-          >
-            <option value="all">All sources</option>
-            {sources.map((s) => (
-              <option key={s} value={s}>
-                {SOURCE_LABEL[s] ?? s}
-              </option>
-            ))}
-          </select>
+          {tab === "logs" ? (
+            <select
+              aria-label="Filter by source"
+              value={source}
+              onChange={(e) => setSource(e.target.value)}
+              className="h-10 rounded-xl border border-border bg-secondary/40 px-3 text-sm text-foreground"
+            >
+              <option value="all">All sources</option>
+              {sources.map((s) => (
+                <option key={s} value={s}>
+                  {SOURCE_LABEL[s] ?? s}
+                </option>
+              ))}
+            </select>
+          ) : null}
           <span className="text-xs text-muted-foreground">
-            {filtered.length} of {(logs ?? []).length} entries
+            {tab === "conversations"
+              ? `${filteredConvs.length} conversations`
+              : `${filteredLogs.length} of ${(logs ?? []).length} entries`}
           </span>
         </div>
       </Card>
 
-      {isLoading ? (
+      {tab === "conversations" ? (
+        loadingConvs ? (
+          <Card>
+            <p className="text-sm text-muted-foreground">Loading conversations…</p>
+          </Card>
+        ) : filteredConvs.length === 0 ? (
+          <Card>
+            <p className="text-sm text-muted-foreground">
+              No conversations yet.{" "}
+              <Link to="/ai" className="text-primary hover:underline">
+                Start one in AI Hub
+              </Link>
+            </p>
+          </Card>
+        ) : (
+          <div className="space-y-6">
+            {convGroups.map(([day, items]) => (
+              <section key={day}>
+                <h2 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                  {day}
+                </h2>
+                <div className="space-y-2">
+                  {items.map((c) => {
+                    const model = modelById(c.model_id);
+                    return (
+                      <Card key={c.id} className="p-0">
+                        <div className="flex items-center gap-3 p-4">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                            <MessageCircle className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-foreground">
+                              {c.title}
+                            </p>
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              {model?.name ?? c.model_id} ·{" "}
+                              {new Date(c.updated_at).toLocaleString(undefined, {
+                                month: "short",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 gap-1">
+                            <Link
+                              to="/ai"
+                              className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary"
+                            >
+                              <ExternalLink className="h-3 w-3" /> Open & edit
+                            </Link>
+                            <button
+                              onClick={() => void handleDeleteConv(c.id)}
+                              className="rounded-lg p-1.5 text-muted-foreground hover:text-destructive"
+                              title="Delete conversation"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
+          </div>
+        )
+      ) : loadingLogs ? (
         <Card>
           <p className="text-sm text-muted-foreground">Loading your history…</p>
         </Card>
-      ) : filtered.length === 0 ? (
+      ) : filteredLogs.length === 0 ? (
         <Card>
           <p className="text-sm text-muted-foreground">
             Nothing here yet.{" "}
@@ -152,7 +290,7 @@ function AiHistory() {
         </Card>
       ) : (
         <div className="space-y-6">
-          {groups.map(([day, items]) => (
+          {logGroups.map(([day, items]) => (
             <section key={day}>
               <h2 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 {day}

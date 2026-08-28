@@ -91,6 +91,39 @@ export async function runModel(opts: {
     "X-Lovable-AIG-SDK": "fetch",
   };
 
+  if (model.startsWith("anthropic/")) {
+    const res = await fetch(`${GATEWAY}/chat/completions`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        model,
+        stream: true,
+        messages: messages.map((m) => ({
+          role: m.role,
+          content:
+            typeof m.content === "string"
+              ? m.content
+              : m.content.map((p) => {
+                  if (p.type === "input_text") return { type: "text", text: p.text };
+                  if (p.type === "input_image")
+                    return { type: "image_url", image_url: { url: p.image_url } };
+                  return { type: "text", text: `[File: ${p.filename}]\n${p.file_data}` };
+                }),
+        })),
+        ...(jsonSchema
+          ? {
+              response_format: {
+                type: "json_schema",
+                json_schema: { name: jsonSchema.name, strict: true, schema: jsonSchema.schema },
+              },
+            }
+          : {}),
+      }),
+    });
+    if (!res.ok) await fail(res);
+    return readSse(res);
+  }
+
   if (model.startsWith("openai/")) {
     const res = await fetch(`${GATEWAY}/responses`, {
       method: "POST",

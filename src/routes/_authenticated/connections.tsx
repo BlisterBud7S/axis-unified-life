@@ -2,7 +2,7 @@ import { Card, CardTitle } from "@/components/axis/Card";
 import { Header } from "@/components/axis/Header";
 import { CONNECTORS, CONNECTOR_GROUPS } from "@/lib/connectors";
 import { createFileRoute } from "@tanstack/react-router";
-import { Info, Plug, Lock } from "lucide-react";
+import { Bot, Cloud, Database, HeartPulse, Info, Laptop, Lock, Plug } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/connections")({
   head: () => ({
@@ -11,7 +11,7 @@ export const Route = createFileRoute("/_authenticated/connections")({
       {
         name: "description",
         content:
-          "Connect Google, Microsoft, GitHub, Notion, Slack and more so AXIS can work with your own files, mail, calendar and data.",
+          "Connect Google, Microsoft, GitHub, Notion, Slack, Claude, ChatGPT and more so AXIS can work with your own files, mail, calendar and data.",
       },
       { property: "og:title", content: "Connections — link your apps to AXIS" },
       {
@@ -24,6 +24,24 @@ export const Route = createFileRoute("/_authenticated/connections")({
   }),
   component: ConnectionsPage,
 });
+
+const GROUP_ICONS: Record<string, typeof Plug> = {
+  Google: Cloud,
+  Microsoft: Laptop,
+  Work: Plug,
+  Data: Database,
+  Health: HeartPulse,
+  AI: Bot,
+};
+
+const GROUP_DESCRIPTIONS: Record<string, string> = {
+  Google: "Connect your Google Workspace apps — files, mail, calendar, sheets and slides.",
+  Microsoft: "Link your Microsoft 365 apps — Outlook, OneDrive, Word, Excel, Teams and more.",
+  Work: "Bring in context from your dev tools, project management and communication platforms.",
+  Data: "Query your own data warehouses and lakehouse tables directly from AXIS.",
+  Health: "Sync wearable and health app data into your AXIS Health dashboard.",
+  AI: "Import conversations from other AI platforms and use your own API keys for direct model access.",
+};
 
 function ConnectionsPage() {
   return (
@@ -40,7 +58,7 @@ function ConnectionsPage() {
             <p className="font-medium text-foreground">Setup pending</p>
             <p>
               Every connector below needs its own OAuth app registered with that provider
-              (Google Cloud, Microsoft Entra, GitHub, Notion, and so on) before accounts can be
+              (Google Cloud, Microsoft Entra, GitHub, Anthropic, and so on) before accounts can be
               linked. None are configured yet, so the buttons stay disabled — nothing here is
               faked.
             </p>
@@ -48,12 +66,23 @@ function ConnectionsPage() {
         </div>
       </Card>
 
-      <div className="space-y-6">
+      <div className="space-y-8">
         {CONNECTOR_GROUPS.map((group) => {
           const items = CONNECTORS.filter((c) => c.group === group);
+          const Icon = GROUP_ICONS[group] ?? Plug;
           return (
             <div key={group}>
-              <CardTitle>{group}</CardTitle>
+              <div className="mb-3">
+                <CardTitle>
+                  <span className="flex items-center gap-2">
+                    <Icon className="h-4 w-4 text-primary" />
+                    {group}
+                  </span>
+                </CardTitle>
+                {GROUP_DESCRIPTIONS[group] ? (
+                  <p className="mt-1 text-xs text-muted-foreground">{GROUP_DESCRIPTIONS[group]}</p>
+                ) : null}
+              </div>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {items.map((c) => (
                   <Card key={c.id} className="flex items-start justify-between gap-3">

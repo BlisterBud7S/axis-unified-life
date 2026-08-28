@@ -1,7 +1,7 @@
 export type ConnectorDef = {
   id: string;
   name: string;
-  group: "Google" | "Microsoft" | "Work" | "Data" | "Health";
+  group: "Google" | "Microsoft" | "Work" | "Data" | "Health" | "AI";
   blurb: string;
 };
 
@@ -36,6 +36,15 @@ export const CONNECTORS: ConnectorDef[] = [
   { id: "redshift", name: "Amazon Redshift", group: "Data", blurb: "Query Redshift with your identity." },
   { id: "fabric", name: "Microsoft Fabric", group: "Data", blurb: "Fabric data and GraphQL endpoints." },
   { id: "oura", name: "Oura", group: "Health", blurb: "Sleep, readiness and activity into Health." },
+  { id: "whoop", name: "WHOOP", group: "Health", blurb: "Strain, recovery and sleep from your WHOOP band." },
+  { id: "fitbit", name: "Fitbit", group: "Health", blurb: "Steps, sleep and heart rate from your Fitbit." },
+  { id: "apple_health", name: "Apple Health", group: "Health", blurb: "Workouts, steps and vitals from HealthKit." },
+  { id: "claude", name: "Claude", group: "AI", blurb: "Import Claude conversations and use Anthropic models." },
+  { id: "chatgpt", name: "ChatGPT", group: "AI", blurb: "Import ChatGPT conversations and history." },
+  { id: "gemini", name: "Google Gemini", group: "AI", blurb: "Sync Gemini conversations into AXIS." },
+  { id: "perplexity", name: "Perplexity", group: "AI", blurb: "Bring Perplexity research into AXIS context." },
+  { id: "openai_api", name: "OpenAI API", group: "AI", blurb: "Use your own OpenAI API key for direct access." },
+  { id: "anthropic_api", name: "Anthropic API", group: "AI", blurb: "Use your own Anthropic API key for Claude models." },
 ];
 
 export const CONNECTOR_GROUPS: ConnectorDef["group"][] = [
@@ -44,4 +53,5 @@ export const CONNECTOR_GROUPS: ConnectorDef["group"][] = [
   "Work",
   "Data",
   "Health",
+  "AI",
 ];

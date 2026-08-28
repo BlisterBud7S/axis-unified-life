@@ -28,8 +28,8 @@ function PublicPricing() {
       <h1 className="text-3xl font-semibold text-foreground sm:text-4xl">Pricing</h1>
       <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
         Every plan includes the full AXIS dashboard — tasks, habits, finance, health and school
-        tracking. Paid plans unlock stronger AI engines, higher daily limits and the automation
-        features. Yearly billing costs ten months instead of twelve.
+        tracking. All 28 AI engines (Claude, GPT, Gemini and AXIS originals) are available on every
+        plan. Paid plans unlock higher daily limits and automation features. Yearly billing costs ten months instead of twelve.
       </p>
 
       <div className="mt-8 grid gap-4 lg:grid-cols-4">
