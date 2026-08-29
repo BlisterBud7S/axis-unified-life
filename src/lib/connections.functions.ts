@@ -5,8 +5,7 @@ import { z } from "zod";
 export const listMyConnections = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await context.supabase
       .from("user_connections")
       .select("id, connector_id, created_at, updated_at")
       .eq("user_id", context.userId)
@@ -26,8 +25,7 @@ export const saveConnection = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.from("user_connections").upsert(
+    const { error } = await context.supabase.from("user_connections").upsert(
       {
         user_id: context.userId,
         connector_id: data.connectorId,
@@ -46,8 +44,7 @@ export const deleteConnection = createServerFn({ method: "POST" })
     z.object({ connectorId: z.string().min(1).max(100) }).parse(data),
   )
   .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin
+    const { error } = await context.supabase
       .from("user_connections")
       .delete()
       .eq("user_id", context.userId)
