@@ -22,7 +22,13 @@ function envOrNull(name: string): string | null {
 async function resolveKey(
   provider: "openai" | "anthropic" | "google",
   userId?: string,
+  builtIn?: boolean,
 ): Promise<string> {
+  if (builtIn && provider === "google") {
+    const key = envOrNull("GOOGLE_AI_API_KEY");
+    if (key) return key;
+    throw new Error("AXIS AI is temporarily unavailable. Please try again later.");
+  }
   if (userId) {
     const { getUserAiKey } = await import("@/lib/connections.functions");
     const userKey = await getUserAiKey(userId, provider);
@@ -30,7 +36,7 @@ async function resolveKey(
   }
   const envMap = { openai: "OPENAI_API_KEY", anthropic: "ANTHROPIC_API_KEY", google: "GOOGLE_AI_API_KEY" };
   const key = envOrNull(envMap[provider]);
-  if (!key) throw new Error(`No ${provider} API key configured. Add your own key in Connections, or ask the site owner to set ${envMap[provider]}.`);
+  if (!key) throw new Error(`To use this model, add your own ${provider} API key in Settings → Connections.`);
   return key;
 }
 
@@ -102,11 +108,12 @@ export async function runModel(opts: {
   messages: AxisMessage[];
   jsonSchema?: JsonSchema;
   userId?: string;
+  builtIn?: boolean;
 }): Promise<string> {
-  const { model, messages, jsonSchema, userId } = opts;
+  const { model, messages, jsonSchema, userId, builtIn } = opts;
 
   if (model.startsWith("anthropic/")) {
-    const apiKey = await resolveKey("anthropic", userId);
+    const apiKey = await resolveKey("anthropic", userId, builtIn);
     const modelId = model.replace("anthropic/", "");
 
     const system = messages.filter((m) => m.role === "system").map((m) =>
@@ -155,7 +162,7 @@ export async function runModel(opts: {
   }
 
   if (model.startsWith("openai/")) {
-    const apiKey = await resolveKey("openai", userId);
+    const apiKey = await resolveKey("openai", userId, builtIn);
     const modelId = model.replace("openai/", "");
 
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -183,7 +190,7 @@ export async function runModel(opts: {
   }
 
   if (model.startsWith("google/")) {
-    const apiKey = await resolveKey("google", userId);
+    const apiKey = await resolveKey("google", userId, builtIn);
     const modelId = model.replace("google/", "");
 
     const contents = messages

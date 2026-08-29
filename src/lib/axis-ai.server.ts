@@ -158,7 +158,8 @@ export async function chat(opts: {
     messages.push({ role: "user", content: parts });
   }
 
-  const reply = await runModel({ model: model.underlying, messages, userId: opts.userId });
+  const builtIn = model.family === "AXIS Signature";
+  const reply = await runModel({ model: model.underlying, messages, userId: builtIn ? undefined : opts.userId, builtIn });
   const text = reply.trim() || "I couldn't produce an answer for that — try rephrasing.";
   const promptLog = attachments.length
     ? `${opts.message}\n[attachments: ${attachments.map((a) => a.name).join(", ")}]`
@@ -223,6 +224,7 @@ export async function scanMeal(opts: {
   hint?: string;
 }) {
   const { model } = await resolveAccess(opts.supabase, opts.userId, opts.modelId, "mealScan");
+  const builtInMeal = model.family === "AXIS Signature";
 
   const raw = await runModel({
     model: model.underlying,
@@ -246,7 +248,8 @@ export async function scanMeal(opts: {
       },
     ],
     jsonSchema: { name: "meal_estimate", schema: MEAL_SCHEMA as unknown as Record<string, unknown> },
-    userId: opts.userId,
+    userId: builtInMeal ? undefined : opts.userId,
+    builtIn: builtInMeal,
   });
 
   const estimate = parseJson<MealEstimate>(raw);
@@ -298,6 +301,7 @@ export async function schoolPlan(opts: {
   schoolId: string;
 }) {
   const { model } = await resolveAccess(opts.supabase, opts.userId, opts.modelId, "schoolPath");
+  const builtInSchool = model.family === "AXIS Signature";
 
   const [{ data: school }, { data: academics }, { data: existing }] = await Promise.all([
     opts.supabase.from("target_schools").select("*").eq("id", opts.schoolId).maybeSingle(),
@@ -338,7 +342,8 @@ export async function schoolPlan(opts: {
       },
     ],
     jsonSchema: { name: "school_plan", schema: PLAN_SCHEMA as unknown as Record<string, unknown> },
-    userId: opts.userId,
+    userId: builtInSchool ? undefined : opts.userId,
+    builtIn: builtInSchool,
   });
 
   const plan = parseJson<SchoolPlan>(raw);
@@ -429,6 +434,7 @@ export async function makeDocument(opts: {
 }) {
   const { config, model, profile } = await resolveAccess(opts.supabase, opts.userId, opts.modelId);
   const allowContext = opts.useContext && config.lifeContext;
+  const builtInDoc = model.family === "AXIS Signature";
 
   const messages: AxisMessage[] = [{ role: "system", content: DOC_SYSTEM }];
   if (allowContext) {
@@ -457,7 +463,8 @@ export async function makeDocument(opts: {
     model: model.underlying,
     messages,
     jsonSchema: { name: "axis_document", schema: DOC_SCHEMA as unknown as Record<string, unknown> },
-    userId: opts.userId,
+    userId: builtInDoc ? undefined : opts.userId,
+    builtIn: builtInDoc,
   });
 
   const spec = parseJson<DocSpec>(raw);
