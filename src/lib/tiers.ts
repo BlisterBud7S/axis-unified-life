@@ -11,8 +11,9 @@ export type AxisModel = {
 };
 
 /**
- * Every engine available on the Lovable AI Gateway, exposed under AXIS branding.
  * All engines are unlocked on every tier — daily message limits still apply per tier.
+ * AXIS Signature models run on server-side credits (no user API key needed).
+ * Sol, Apex, and Nova models require the user's own API key in Connections.
  */
 export const MODELS: AxisModel[] = [
   // ---- Signature AXIS line-up ----
@@ -20,7 +21,7 @@ export const MODELS: AxisModel[] = [
     id: "axis-swift",
     name: "AXIS Swift",
     tagline: "Fast everyday answers and quick logging help",
-    underlying: "openai/gpt-5.6-luna",
+    underlying: "google/gemini-2.5-flash-lite",
     minTier: "free",
     vision: true,
     family: "AXIS Signature",
@@ -29,7 +30,7 @@ export const MODELS: AxisModel[] = [
     id: "axis-core",
     name: "AXIS Core",
     tagline: "Balanced reasoning for planning and analysis",
-    underlying: "openai/gpt-5.6-terra",
+    underlying: "google/gemini-2.5-flash",
     minTier: "free",
     vision: true,
     family: "AXIS Signature",
@@ -38,7 +39,7 @@ export const MODELS: AxisModel[] = [
     id: "axis-scout",
     name: "AXIS Scout",
     tagline: "Long-context research and document work",
-    underlying: "google/gemini-3.6-flash",
+    underlying: "google/gemini-2.5-flash",
     minTier: "free",
     vision: true,
     family: "AXIS Signature",
@@ -47,7 +48,7 @@ export const MODELS: AxisModel[] = [
     id: "axis-prime",
     name: "AXIS Prime",
     tagline: "Deepest reasoning — strategy, admissions, finance",
-    underlying: "openai/gpt-5.6-sol",
+    underlying: "google/gemini-2.5-pro",
     minTier: "free",
     vision: true,
     family: "AXIS Signature",
@@ -56,7 +57,7 @@ export const MODELS: AxisModel[] = [
     id: "axis-oracle",
     name: "AXIS Oracle",
     tagline: "Alternate frontier engine for second opinions",
-    underlying: "google/gemini-3.1-pro-preview",
+    underlying: "google/gemini-2.5-pro",
     minTier: "free",
     vision: true,
     family: "AXIS Signature",
