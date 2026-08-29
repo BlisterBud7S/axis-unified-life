@@ -33,19 +33,15 @@ function createSupabaseAdminClient() {
   const SUPABASE_URL = process.env['SUPABASE_URL'] || 'https://nctfejbwdfkpwdkyitxc.supabase.co';
   const SUPABASE_SERVICE_ROLE_KEY = process.env['SUPABASE_SERVICE_ROLE_KEY'];
 
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    const missing = [
-      ...(!SUPABASE_URL ? ['SUPABASE_URL'] : []),
-      ...(!SUPABASE_SERVICE_ROLE_KEY ? ['SUPABASE_SERVICE_ROLE_KEY'] : []),
-    ];
-    const message = `Missing Supabase environment variable(s): ${missing.join(', ')}. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your environment.`;
-    console.error(`[Supabase] ${message}`);
-    throw new Error(message);
+  if (!SUPABASE_SERVICE_ROLE_KEY) {
+    console.warn('[Supabase] SUPABASE_SERVICE_ROLE_KEY not set — admin client will use anon key (RLS enforced).');
   }
 
-  return createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  const key = SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5jdGZlamJ3ZGZrcHdka3lpdHhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1Njg1NTQsImV4cCI6MjEwMTE0NDU1NH0.22A3JPx1UuNtjDiFbD71aoKmuJt0lHrI-TTyWgZTX48';
+
+  return createClient<Database>(SUPABASE_URL, key, {
     global: {
-      fetch: createSupabaseFetch(SUPABASE_SERVICE_ROLE_KEY),
+      fetch: createSupabaseFetch(key),
     },
     auth: {
       storage: undefined,
