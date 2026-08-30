@@ -83,11 +83,20 @@ async function readSse(res: Response) {
 
 async function fail(res: Response): Promise<never> {
   const body = await res.text();
-  if (res.status === 429) throw new Error("AI is busy right now — wait a few seconds and try again.");
+  let detail = "";
+  try {
+    const parsed = JSON.parse(body) as { error?: { message?: string } };
+    detail = parsed.error?.message ?? "";
+  } catch { /* keep raw */ }
+  if (res.status === 429) {
+    throw new Error(detail
+      ? `AI rate limit: ${detail.slice(0, 300)}`
+      : "AI is busy right now — wait a few seconds and try again.");
+  }
   if (res.status === 402) throw new Error("API quota exhausted — check your billing dashboard.");
   if (res.status === 403) throw new Error("AI access denied — check your API key permissions.");
   if (res.status === 401) throw new Error("Invalid API key — check your environment variables.");
-  throw new Error(`AI request failed [${res.status}]: ${body.slice(0, 400)}`);
+  throw new Error(`AI request failed [${res.status}]: ${(detail || body).slice(0, 400)}`);
 }
 
 function toOpenAiMessages(messages: AxisMessage[]) {
