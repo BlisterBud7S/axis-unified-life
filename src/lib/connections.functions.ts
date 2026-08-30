@@ -53,11 +53,12 @@ export const deleteConnection = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const getUserAiKey = async (
   userId: string,
   provider: "openai" | "anthropic" | "google",
+  supabase?: any,
 ): Promise<string | null> => {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const connectorIds: Record<string, string[]> = {
     openai: ["openai_api", "chatgpt"],
     anthropic: ["anthropic_api", "claude"],
@@ -66,7 +67,13 @@ export const getUserAiKey = async (
   const ids = connectorIds[provider];
   if (!ids) return null;
 
-  const { data } = await supabaseAdmin
+  let client = supabase;
+  if (!client) {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    client = supabaseAdmin;
+  }
+
+  const { data } = await client
     .from("user_connections")
     .select("api_key")
     .eq("user_id", userId)

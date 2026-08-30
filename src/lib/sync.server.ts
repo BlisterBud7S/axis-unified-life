@@ -171,6 +171,7 @@ export async function importStatement(opts: {
     ],
     jsonSchema: { name: "statement", schema: STATEMENT_SCHEMA as unknown as Record<string, unknown> },
     userId: opts.userId,
+    supabase: opts.supabase,
   });
 
   const parsed = parseJson<Statement>(raw);
@@ -302,6 +303,7 @@ export async function affordability(opts: {
     ],
     jsonSchema: { name: "affordability", schema: AFFORD_SCHEMA as unknown as Record<string, unknown> },
     userId: opts.userId,
+    supabase: opts.supabase,
   });
 
   const result = parseJson<Affordability>(raw);
@@ -349,7 +351,7 @@ export async function codeChat(opts: {
   for (const m of opts.history.slice(-12)) messages.push({ role: m.role, content: m.content });
   messages.push({ role: "user", content: opts.message });
 
-  const reply = (await runModel({ model: model.underlying, messages, userId: opts.userId })).trim();
+  const reply = (await runModel({ model: model.underlying, messages, userId: opts.userId, supabase: opts.supabase })).trim();
   const text = reply || "I couldn't produce an answer for that — try rephrasing.";
 
   await logChat(opts.supabase, opts.userId, {

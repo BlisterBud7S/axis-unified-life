@@ -22,10 +22,11 @@ function envOrNull(name: string): string | null {
 async function resolveKey(
   provider: "openai" | "anthropic" | "google",
   userId?: string,
+  supabase?: unknown,
 ): Promise<string> {
   if (userId) {
     const { getUserAiKey } = await import("@/lib/connections.functions");
-    const userKey = await getUserAiKey(userId, provider);
+    const userKey = await getUserAiKey(userId, provider, supabase);
     if (userKey) return userKey;
   }
   const envMap = { openai: "OPENAI_API_KEY", anthropic: "ANTHROPIC_API_KEY", google: "GOOGLE_AI_API_KEY" };
@@ -109,11 +110,12 @@ export async function runModel(opts: {
   messages: AxisMessage[];
   jsonSchema?: JsonSchema;
   userId?: string;
+  supabase?: unknown;
 }): Promise<string> {
-  const { model, messages, jsonSchema, userId } = opts;
+  const { model, messages, jsonSchema, userId, supabase } = opts;
 
   if (model.startsWith("anthropic/")) {
-    const apiKey = await resolveKey("anthropic", userId);
+    const apiKey = await resolveKey("anthropic", userId, supabase);
     const modelId = model.replace("anthropic/", "");
 
     const system = messages.filter((m) => m.role === "system").map((m) =>
@@ -162,7 +164,7 @@ export async function runModel(opts: {
   }
 
   if (model.startsWith("openai/")) {
-    const apiKey = await resolveKey("openai", userId);
+    const apiKey = await resolveKey("openai", userId, supabase);
     const modelId = model.replace("openai/", "");
 
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -190,7 +192,7 @@ export async function runModel(opts: {
   }
 
   if (model.startsWith("google/")) {
-    const apiKey = await resolveKey("google", userId);
+    const apiKey = await resolveKey("google", userId, supabase);
     const modelId = model.replace("google/", "");
 
     const contents = messages
