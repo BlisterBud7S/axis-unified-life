@@ -11,7 +11,7 @@ export type AxisModel = {
 };
 
 /**
- * All engines are unlocked on every tier — daily message limits still apply per tier.
+ * Models are tiered: Free gets basics, Plus adds mid-range, Pro adds strong, Elite unlocks all.
  * AXIS Signature models use Google Gemini — users add a free Google AI key in Connections.
  * Sol (OpenAI), Apex (Anthropic), and Nova (Google) models need the matching API key.
  */
@@ -40,7 +40,7 @@ export const MODELS: AxisModel[] = [
     name: "AXIS Scout",
     tagline: "Long-context research and document work",
     underlying: "google/gemini-3.6-flash",
-    minTier: "free",
+    minTier: "plus",
     vision: true,
     family: "AXIS Signature",
   },
@@ -49,7 +49,7 @@ export const MODELS: AxisModel[] = [
     name: "AXIS Prime",
     tagline: "Deepest reasoning — strategy, admissions, finance",
     underlying: "google/gemini-3.6-flash",
-    minTier: "free",
+    minTier: "plus",
     vision: true,
     family: "AXIS Signature",
   },
@@ -58,18 +58,18 @@ export const MODELS: AxisModel[] = [
     name: "AXIS Oracle",
     tagline: "Alternate frontier engine for second opinions",
     underlying: "google/gemini-3.6-flash",
-    minTier: "free",
+    minTier: "plus",
     vision: true,
     family: "AXIS Signature",
   },
 
-  // ---- Sol line (OpenAI GPT-5.6 / 5.5 / 5.4 / 5.2 / 5) ----
+  // ---- Sol line (OpenAI) ----
   {
     id: "sol-5-5",
     name: "AXIS Sol 5.5",
     tagline: "Frontier coding, analysis and professional work",
     underlying: "openai/gpt-5.5",
-    minTier: "free",
+    minTier: "pro",
     vision: true,
     family: "Sol line",
   },
@@ -78,7 +78,7 @@ export const MODELS: AxisModel[] = [
     name: "AXIS Sol 5.5 Pro",
     tagline: "Extended reasoning for the hardest problems",
     underlying: "openai/gpt-5.5-pro",
-    minTier: "free",
+    minTier: "elite",
     vision: true,
     family: "Sol line",
   },
@@ -87,7 +87,7 @@ export const MODELS: AxisModel[] = [
     name: "AXIS Sol 5.4",
     tagline: "Affordable frontier model for everyday depth",
     underlying: "openai/gpt-5.4",
-    minTier: "free",
+    minTier: "pro",
     vision: true,
     family: "Sol line",
   },
@@ -96,7 +96,7 @@ export const MODELS: AxisModel[] = [
     name: "AXIS Sol 5.4 Mini",
     tagline: "Strong mini engine for high-volume work",
     underlying: "openai/gpt-5.4-mini",
-    minTier: "free",
+    minTier: "plus",
     vision: true,
     family: "Sol line",
   },
@@ -114,7 +114,7 @@ export const MODELS: AxisModel[] = [
     name: "AXIS Sol 5.4 Pro",
     tagline: "Premium 5.4 reasoning for complex tasks",
     underlying: "openai/gpt-5.4-pro",
-    minTier: "free",
+    minTier: "elite",
     vision: true,
     family: "Sol line",
   },
@@ -123,7 +123,7 @@ export const MODELS: AxisModel[] = [
     name: "AXIS Sol 5.2",
     tagline: "Complex reasoning and problem solving",
     underlying: "openai/gpt-5.2",
-    minTier: "free",
+    minTier: "pro",
     vision: true,
     family: "Sol line",
   },
@@ -132,7 +132,7 @@ export const MODELS: AxisModel[] = [
     name: "AXIS Sol 5",
     tagline: "Accurate, nuanced all-rounder",
     underlying: "openai/gpt-5",
-    minTier: "free",
+    minTier: "pro",
     vision: true,
     family: "Sol line",
   },
@@ -141,7 +141,7 @@ export const MODELS: AxisModel[] = [
     name: "AXIS Sol 5 Mini",
     tagline: "Lower-cost general performance",
     underlying: "openai/gpt-5-mini",
-    minTier: "free",
+    minTier: "plus",
     vision: true,
     family: "Sol line",
   },
@@ -164,13 +164,13 @@ export const MODELS: AxisModel[] = [
     family: "Sol line",
   },
 
-  // ---- Claude line (Anthropic) ----
+  // ---- Apex line (Anthropic) ----
   {
     id: "claude-opus-5",
     name: "AXIS Apex Opus",
     tagline: "Most capable — deep analysis, creative writing and complex reasoning",
     underlying: "anthropic/claude-opus-5",
-    minTier: "free",
+    minTier: "elite",
     vision: true,
     family: "Apex line",
   },
@@ -179,7 +179,7 @@ export const MODELS: AxisModel[] = [
     name: "AXIS Apex Sonnet",
     tagline: "Best balance of speed and intelligence for everyday work",
     underlying: "anthropic/claude-sonnet-5",
-    minTier: "free",
+    minTier: "pro",
     vision: true,
     family: "Apex line",
   },
@@ -197,7 +197,7 @@ export const MODELS: AxisModel[] = [
     name: "AXIS Apex Fable",
     tagline: "Creative storytelling and nuanced content generation",
     underlying: "anthropic/claude-fable-5",
-    minTier: "free",
+    minTier: "plus",
     vision: true,
     family: "Apex line",
   },
@@ -206,7 +206,7 @@ export const MODELS: AxisModel[] = [
     name: "AXIS Apex Opus 4",
     tagline: "Previous-gen powerhouse for complex tasks",
     underlying: "anthropic/claude-opus-4-0-20250514",
-    minTier: "free",
+    minTier: "elite",
     vision: true,
     family: "Apex line",
   },
@@ -215,12 +215,12 @@ export const MODELS: AxisModel[] = [
     name: "AXIS Apex Sonnet 4",
     tagline: "Reliable balanced engine for code and analysis",
     underlying: "anthropic/claude-sonnet-4-0-20250514",
-    minTier: "free",
+    minTier: "plus",
     vision: true,
     family: "Apex line",
   },
 
-  // ---- Gemini line ----
+  // ---- Nova line (Google) ----
   {
     id: "gem-flash",
     name: "AXIS Nova Flash",
@@ -243,7 +243,7 @@ export const MODELS: AxisModel[] = [
 
 export const MODEL_FAMILIES = ["AXIS Signature", "Apex line", "Sol line", "Nova line"] as const;
 
-export const DEFAULT_MODEL_ID = "axis-prime";
+export const DEFAULT_MODEL_ID = "axis-core";
 
 
 export type Tier = {
@@ -273,10 +273,11 @@ export const TIERS: Tier[] = [
     dailyMessages: 15,
     features: [
       "Tasks, habits, finance, health and school tracking",
-      "All 25 AXIS AI engines",
+      "8 AI engines — AXIS Swift, Core, Sol Nano, Converse, Haiku, Nova",
       "15 AI messages a day",
     ],
     locked: [
+      "15 more AI engines (Plus, Pro, Elite)",
       "Meal photo scanning",
       "AI admission roadmaps",
       "AXIS Code canvas",
@@ -300,7 +301,7 @@ export const TIERS: Tier[] = [
     dailyMessages: 150,
     features: [
       "Everything in Free",
-      "All 25 AXIS AI engines",
+      "15 AI engines — adds Scout, Prime, Oracle, Sol Mini, Sonnet 4, Fable and more",
       "150 AI messages a day",
       "Meal photo scanning with calorie estimates",
       "Personal context in AI answers",
@@ -308,7 +309,7 @@ export const TIERS: Tier[] = [
       "Can I afford it? — AI verdicts on your real money",
       "AXIS Vision — generate and edit images from a prompt",
     ],
-    locked: ["AXIS Motion video generation", "AI admission roadmaps", "Bank statement import"],
+    locked: ["9 premium AI engines (Pro, Elite)", "AXIS Motion video generation", "AI admission roadmaps", "Bank statement import"],
     mealScan: true,
     schoolPath: false,
     lifeContext: true,
@@ -326,12 +327,13 @@ export const TIERS: Tier[] = [
     dailyMessages: 600,
     features: [
       "Everything in Plus",
-            "AI admission roadmaps per target school",
+      "20 AI engines — adds Sol 5, 5.2, 5.4, 5.5, Apex Sonnet and more",
+      "AI admission roadmaps per target school",
       "Bank statement import — upload a statement, AXIS logs every transaction",
       "AXIS Motion — generate short videos with sound from a prompt",
       "600 AI messages a day",
     ],
-    locked: ["Unlimited messages"],
+    locked: ["4 elite AI engines", "Unlimited messages"],
     mealScan: true,
     schoolPath: true,
     lifeContext: true,
@@ -349,7 +351,8 @@ export const TIERS: Tier[] = [
     dailyMessages: null,
     features: [
       "Everything in Pro",
-            "Unlimited AI messages",
+      "All 24 AI engines — adds Sol Pro, Apex Opus and more",
+      "Unlimited AI messages",
       "Priority handling on long analyses",
     ],
     locked: [],
