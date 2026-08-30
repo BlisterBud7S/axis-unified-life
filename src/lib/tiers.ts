@@ -12,8 +12,8 @@ export type AxisModel = {
 
 /**
  * All engines are unlocked on every tier — daily message limits still apply per tier.
- * AXIS Signature models run on server-side credits (no user API key needed).
- * Sol, Apex, and Nova models require the user's own API key in Connections.
+ * AXIS Signature models use Google Gemini — users add a free Google AI key in Connections.
+ * Sol (OpenAI), Apex (Anthropic), and Nova (Google) models need the matching API key.
  */
 export const MODELS: AxisModel[] = [
   // ---- Signature AXIS line-up ----

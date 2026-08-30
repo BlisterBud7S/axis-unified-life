@@ -42,7 +42,7 @@ export const CONNECTORS: ConnectorDef[] = [
   { id: "apple_health", name: "Apple Health", group: "Health", blurb: "Workouts, steps and vitals from HealthKit.", authType: "oauth" },
   { id: "claude", name: "Claude", group: "AI", blurb: "Import Claude conversations and use Anthropic models.", authType: "api_key", keyPlaceholder: "sk-ant-...", keyHelpUrl: "https://console.anthropic.com/settings/keys" },
   { id: "chatgpt", name: "ChatGPT", group: "AI", blurb: "Import ChatGPT conversations and history.", authType: "api_key", keyPlaceholder: "sk-...", keyHelpUrl: "https://platform.openai.com/api-keys" },
-  { id: "gemini", name: "Google Gemini", group: "AI", blurb: "Sync Gemini conversations into AXIS.", authType: "api_key", keyPlaceholder: "AIza...", keyHelpUrl: "https://aistudio.google.com/apikey" },
+  { id: "gemini", name: "Google AI (Gemini)", group: "AI", blurb: "Powers all AXIS Signature models. Get a free key at aistudio.google.com/apikey", authType: "api_key", keyPlaceholder: "AIza...", keyHelpUrl: "https://aistudio.google.com/apikey" },
   { id: "perplexity", name: "Perplexity", group: "AI", blurb: "Bring Perplexity research into AXIS context.", authType: "api_key", keyPlaceholder: "pplx-...", keyHelpUrl: "https://docs.perplexity.ai/guides/getting-started" },
   { id: "openai_api", name: "OpenAI API", group: "AI", blurb: "Use your own OpenAI API key for direct access.", authType: "api_key", keyPlaceholder: "sk-...", keyHelpUrl: "https://platform.openai.com/api-keys" },
   { id: "anthropic_api", name: "Anthropic API", group: "AI", blurb: "Use your own Anthropic API key for Claude models.", authType: "api_key", keyPlaceholder: "sk-ant-...", keyHelpUrl: "https://console.anthropic.com/settings/keys" },
