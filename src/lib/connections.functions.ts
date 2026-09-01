@@ -1,12 +1,13 @@
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 
 export const listMyConnections = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await context.supabase
       .from("user_connections")
       .select("id, connector_id, created_at, updated_at")
       .eq("user_id", context.userId)
@@ -26,8 +27,7 @@ export const saveConnection = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.from("user_connections").upsert(
+    const { error } = await context.supabase.from("user_connections").upsert(
       {
         user_id: context.userId,
         connector_id: data.connectorId,
@@ -46,8 +46,7 @@ export const deleteConnection = createServerFn({ method: "POST" })
     z.object({ connectorId: z.string().min(1).max(100) }).parse(data),
   )
   .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin
+    const { error } = await context.supabase
       .from("user_connections")
       .delete()
       .eq("user_id", context.userId)
@@ -57,10 +56,10 @@ export const deleteConnection = createServerFn({ method: "POST" })
   });
 
 export const getUserAiKey = async (
+  supabase: SupabaseClient<Database>,
   userId: string,
   provider: "openai" | "anthropic" | "google",
 ): Promise<string | null> => {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const connectorIds: Record<string, string[]> = {
     openai: ["openai_api", "chatgpt"],
     anthropic: ["anthropic_api", "claude"],
@@ -69,7 +68,7 @@ export const getUserAiKey = async (
   const ids = connectorIds[provider];
   if (!ids) return null;
 
-  const { data } = await supabaseAdmin
+  const { data } = await supabase
     .from("user_connections")
     .select("api_key")
     .eq("user_id", userId)

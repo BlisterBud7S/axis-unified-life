@@ -8,9 +8,8 @@ export const updateMyProfileName = createServerFn({ method: "POST" })
     z.object({ fullName: z.string().trim().min(1).max(120) }).parse(data),
   )
   .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const email = typeof context.claims.email === "string" ? context.claims.email : null;
-    const { error } = await supabaseAdmin.from("users").upsert(
+    const { error } = await context.supabase.from("users").upsert(
       {
         id: context.userId,
         email,
