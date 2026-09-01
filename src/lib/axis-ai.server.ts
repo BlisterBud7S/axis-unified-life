@@ -431,6 +431,7 @@ export async function makeDocument(opts: {
 }) {
   const { config, model, profile } = await resolveAccess(opts.supabase, opts.userId, opts.modelId);
   const allowContext = opts.useContext && config.lifeContext;
+
   const messages: AxisMessage[] = [{ role: "system", content: DOC_SYSTEM }];
   if (allowContext) {
     messages.push({
