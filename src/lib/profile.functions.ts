@@ -18,9 +18,6 @@ export const updateMyProfileName = createServerFn({ method: "POST" })
       { onConflict: "id" },
     );
 
-    if (error) {
-      console.error("[profile] upsert error:", error.message, error.code, error.details);
-      throw new Error(`Unable to save your name: ${error.message}`);
-    }
+    if (error) throw new Error("Unable to save your name. Please try again.");
     return { ok: true };
   });

@@ -1,3 +1,6 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
+
 export type TextPart = { type: "input_text"; text: string };
 export type ImagePart = { type: "input_image"; image_url: string };
 export type FilePart = { type: "input_file"; filename: string; file_data: string };
@@ -9,12 +12,6 @@ export type AxisMessage = {
 
 type JsonSchema = { name: string; schema: Record<string, unknown> };
 
-function requireEnv(name: string): string {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing environment variable: ${name}`);
-  return v;
-}
-
 function envOrNull(name: string): string | null {
   return process.env[name] ?? null;
 }
@@ -22,23 +19,16 @@ function envOrNull(name: string): string | null {
 async function resolveKey(
   provider: "openai" | "anthropic" | "google",
   userId?: string,
-  supabase?: unknown,
+  supabase?: SupabaseClient<Database>,
 ): Promise<string> {
-  if (userId) {
+  if (userId && supabase) {
     const { getUserAiKey } = await import("@/lib/connections.functions");
-    const userKey = await getUserAiKey(userId, provider, supabase);
+    const userKey = await getUserAiKey(supabase, userId, provider);
     if (userKey) return userKey;
   }
   const envMap = { openai: "OPENAI_API_KEY", anthropic: "ANTHROPIC_API_KEY", google: "GOOGLE_AI_API_KEY" };
   const key = envOrNull(envMap[provider]);
-  if (!key) {
-    const instructions: Record<string, string> = {
-      openai: "Add your OpenAI API key in Settings → Connections to use this model.",
-      anthropic: "Add your Anthropic API key in Settings → Connections to use this model.",
-      google: "Add your Google AI API key in Settings → Connections to use AXIS AI. Get a free key at aistudio.google.com/apikey",
-    };
-    throw new Error(instructions[provider] ?? `Add your ${provider} API key in Settings → Connections.`);
-  }
+  if (!key) throw new Error(`No ${provider} API key configured. Add your own key in Connections, or ask the site owner to set ${envMap[provider]}.`);
   return key;
 }
 
@@ -83,20 +73,11 @@ async function readSse(res: Response) {
 
 async function fail(res: Response): Promise<never> {
   const body = await res.text();
-  let detail = "";
-  try {
-    const parsed = JSON.parse(body) as { error?: { message?: string } };
-    detail = parsed.error?.message ?? "";
-  } catch { /* keep raw */ }
-  if (res.status === 429) {
-    throw new Error(detail
-      ? `AI rate limit: ${detail.slice(0, 300)}`
-      : "AI is busy right now — wait a few seconds and try again.");
-  }
+  if (res.status === 429) throw new Error("AI is busy right now — wait a few seconds and try again.");
   if (res.status === 402) throw new Error("API quota exhausted — check your billing dashboard.");
   if (res.status === 403) throw new Error("AI access denied — check your API key permissions.");
   if (res.status === 401) throw new Error("Invalid API key — check your environment variables.");
-  throw new Error(`AI request failed [${res.status}]: ${(detail || body).slice(0, 400)}`);
+  throw new Error(`AI request failed [${res.status}]: ${body.slice(0, 400)}`);
 }
 
 function toOpenAiMessages(messages: AxisMessage[]) {
@@ -119,7 +100,7 @@ export async function runModel(opts: {
   messages: AxisMessage[];
   jsonSchema?: JsonSchema;
   userId?: string;
-  supabase?: unknown;
+  supabase?: SupabaseClient<Database>;
 }): Promise<string> {
   const { model, messages, jsonSchema, userId, supabase } = opts;
 
