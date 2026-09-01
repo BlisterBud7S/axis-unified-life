@@ -1,7 +1,7 @@
 import { resolveAccess, logChat, type Client } from "@/lib/axis-ai.server";
 import { resolveKey } from "@/lib/ai-gateway.server";
 
-const IMAGE_MODEL = "gemini-2.0-flash-exp";
+const IMAGE_MODEL = "gemini-2.0-flash-exp-image-generation";
 const VIDEO_MODEL = "veo-2";
 const BUCKET = "ai-media";
 
