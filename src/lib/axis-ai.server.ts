@@ -158,7 +158,7 @@ export async function chat(opts: {
     messages.push({ role: "user", content: parts });
   }
 
-  const reply = await runModel({ model: model.underlying, messages, userId: opts.userId });
+  const reply = await runModel({ model: model.underlying, messages, userId: opts.userId, supabase: opts.supabase });
   const text = reply.trim() || "I couldn't produce an answer for that — try rephrasing.";
   const promptLog = attachments.length
     ? `${opts.message}\n[attachments: ${attachments.map((a) => a.name).join(", ")}]`
@@ -247,6 +247,7 @@ export async function scanMeal(opts: {
     ],
     jsonSchema: { name: "meal_estimate", schema: MEAL_SCHEMA as unknown as Record<string, unknown> },
     userId: opts.userId,
+    supabase: opts.supabase,
   });
 
   const estimate = parseJson<MealEstimate>(raw);
@@ -339,6 +340,7 @@ export async function schoolPlan(opts: {
     ],
     jsonSchema: { name: "school_plan", schema: PLAN_SCHEMA as unknown as Record<string, unknown> },
     userId: opts.userId,
+    supabase: opts.supabase,
   });
 
   const plan = parseJson<SchoolPlan>(raw);
@@ -458,6 +460,7 @@ export async function makeDocument(opts: {
     messages,
     jsonSchema: { name: "axis_document", schema: DOC_SCHEMA as unknown as Record<string, unknown> },
     userId: opts.userId,
+    supabase: opts.supabase,
   });
 
   const spec = parseJson<DocSpec>(raw);
