@@ -1,14 +1,9 @@
 import { resolveAccess, logChat, type Client } from "@/lib/axis-ai.server";
+import { resolveKey } from "@/lib/ai-gateway.server";
 
-const IMAGE_MODEL = "gemini-3-pro-image";
-const VIDEO_MODEL = "veo-3.1-lite";
+const IMAGE_MODEL = "gemini-2.0-flash-exp";
+const VIDEO_MODEL = "veo-2";
 const BUCKET = "ai-media";
-
-function googleKey() {
-  const k = process.env["GOOGLE_AI_API_KEY"];
-  if (!k) throw new Error("Missing GOOGLE_AI_API_KEY environment variable.");
-  return k;
-}
 
 async function gatewayError(res: Response): Promise<never> {
   const body = await res.text();
@@ -63,8 +58,9 @@ export async function generateImage(opts: {
     }
   }
 
+  const apiKey = await resolveKey("google", opts.userId, opts.supabase);
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_MODEL}:generateContent?key=${googleKey()}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_MODEL}:generateContent?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -144,8 +140,9 @@ export async function startVideo(opts: {
     throw new Error("One video is already rendering — wait for it to finish before starting another.");
   }
 
+  const apiKey = await resolveKey("google", opts.userId, opts.supabase);
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${VIDEO_MODEL}:predictLongRunning?key=${googleKey()}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${VIDEO_MODEL}:generateVideos?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -234,8 +231,9 @@ export async function videoStatus(opts: {
   }
   if (!row.job_id) throw new Error("That video render is missing its job reference.");
 
+  const apiKey = await resolveKey("google", opts.userId, opts.supabase);
   const jobRes = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/${row.job_id}?key=${googleKey()}`,
+    `https://generativelanguage.googleapis.com/v1beta/${row.job_id}?key=${apiKey}`,
     { method: "GET" },
   );
   if (!jobRes.ok) await gatewayError(jobRes);

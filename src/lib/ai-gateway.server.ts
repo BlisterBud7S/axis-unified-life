@@ -16,7 +16,7 @@ function envOrNull(name: string): string | null {
   return process.env[name] ?? null;
 }
 
-async function resolveKey(
+export async function resolveKey(
   provider: "openai" | "anthropic" | "google",
   userId?: string,
   supabase?: SupabaseClient<Database>,
