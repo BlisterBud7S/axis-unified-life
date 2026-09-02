@@ -73,16 +73,26 @@ export default defineConfig(({ command, mode }) => {
           cleanupOutdatedCaches: true,
           clientsClaim: true,
           skipWaiting: true,
-          navigateFallbackDenylist: [/^\/~oauth/, /^\/api\//],
-          globPatterns: ["**/*.{js,css,woff2,png,svg,ico}"],
+          navigateFallback: null,
+          globPatterns: [],
+          additionalManifestEntries: [{ url: "/offline.html", revision: "2" }],
           runtimeCaching: [
             {
-              urlPattern: ({ request }) => request.mode === "navigate",
+              urlPattern: ({ request, url }) =>
+                request.mode === "navigate" &&
+                !url.pathname.startsWith("/~oauth") &&
+                !url.pathname.startsWith("/api/"),
               handler: "NetworkFirst",
               options: {
                 cacheName: "axis-pages",
                 networkTimeoutSeconds: 5,
                 expiration: { maxEntries: 40 },
+                plugins: [
+                  {
+                    handlerDidError: async () =>
+                      (await caches.match("/offline.html")) ?? Response.error(),
+                  },
+                ],
               },
             },
             {
@@ -104,6 +114,17 @@ export default defineConfig(({ command, mode }) => {
               options: {
                 cacheName: "axis-media",
                 expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              },
+            },
+            {
+              urlPattern: ({ url, sameOrigin }) =>
+                sameOrigin && url.pathname.startsWith("/_server"),
+              handler: "NetworkFirst",
+              method: "GET",
+              options: {
+                cacheName: "axis-rpc",
+                networkTimeoutSeconds: 5,
+                expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 7 },
               },
             },
           ],
