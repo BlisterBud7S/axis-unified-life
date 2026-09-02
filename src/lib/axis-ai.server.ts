@@ -176,7 +176,6 @@ export async function chat(opts: {
 
 const MEAL_SCHEMA = {
   type: "object",
-  additionalProperties: false,
   required: ["name", "confidence", "calories", "protein_g", "carbs_g", "fat_g", "items", "note"],
   properties: {
     name: { type: "string" },
@@ -190,7 +189,6 @@ const MEAL_SCHEMA = {
       type: "array",
       items: {
         type: "object",
-        additionalProperties: false,
         required: ["name", "calories", "protein", "carbs", "fat"],
         properties: {
           name: { type: "string" },
@@ -263,7 +261,6 @@ export async function scanMeal(opts: {
 
 const PLAN_SCHEMA = {
   type: "object",
-  additionalProperties: false,
   required: ["summary", "phases", "checklist", "risks"],
   properties: {
     summary: { type: "string" },
@@ -272,7 +269,6 @@ const PLAN_SCHEMA = {
       type: "array",
       items: {
         type: "object",
-        additionalProperties: false,
         required: ["title", "timeframe", "actions"],
         properties: {
           title: { type: "string" },
@@ -369,7 +365,6 @@ export async function schoolPlan(opts: {
 
 const DOC_SCHEMA = {
   type: "object",
-  additionalProperties: false,
   required: ["title", "subtitle", "summary", "sections", "footer"],
   properties: {
     title: { type: "string" },
@@ -380,7 +375,6 @@ const DOC_SCHEMA = {
       type: "array",
       items: {
         type: "object",
-        additionalProperties: false,
         required: ["heading", "kind", "lines"],
         properties: {
           heading: { type: "string" },

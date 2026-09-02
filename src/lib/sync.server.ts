@@ -100,7 +100,6 @@ export async function importHealth(
 
 const STATEMENT_SCHEMA = {
   type: "object",
-  additionalProperties: false,
   required: ["transactions", "note"],
   properties: {
     note: { type: "string" },
@@ -108,7 +107,6 @@ const STATEMENT_SCHEMA = {
       type: "array",
       items: {
         type: "object",
-        additionalProperties: false,
         required: ["date", "description", "amount", "type", "category"],
         properties: {
           date: { type: "string" },
@@ -218,7 +216,6 @@ export async function importStatement(opts: {
 
 const AFFORD_SCHEMA = {
   type: "object",
-  additionalProperties: false,
   required: ["verdict", "headline", "reasoning", "safe_spend_now", "months_to_save", "tips"],
   properties: {
     verdict: { type: "string", enum: ["yes", "tight", "no"] },
