@@ -89,8 +89,17 @@ export default defineConfig(({ command, mode }) => {
                 expiration: { maxEntries: 40 },
                 plugins: [
                   {
-                    handlerDidError: async () =>
-                      (await caches.match("/offline.html")) ?? Response.error(),
+                    handlerDidError: async () => {
+                      const pages = await caches.open("axis-pages");
+                      const keys = await pages.keys();
+                      for (const req of keys) {
+                        const resp = await pages.match(req);
+                        if (resp) return resp;
+                      }
+                      return (
+                        (await caches.match("/offline.html")) ?? Response.error()
+                      );
+                    },
                   },
                 ],
               },
@@ -99,11 +108,10 @@ export default defineConfig(({ command, mode }) => {
               urlPattern: ({ request, sameOrigin }) =>
                 sameOrigin &&
                 (request.destination === "script" || request.destination === "style"),
-              handler: "NetworkFirst",
+              handler: "StaleWhileRevalidate",
               options: {
                 cacheName: "axis-assets-v2",
-                networkTimeoutSeconds: 5,
-                expiration: { maxEntries: 80 },
+                expiration: { maxEntries: 120 },
               },
             },
             {
