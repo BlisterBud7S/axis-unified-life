@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build && node scripts/patch-ssr-runtime.mjs",
+    "build": "vite build && node scripts/patch-ssr-runtime.mjs && node -e \"const fs=require('fs'),p=require('path'),d='.vercel/output/static';if(fs.existsSync(d)){for(const f of fs.readdirSync('dist/client')){if(f==='sw.js'||f.startsWith('workbox-'))fs.copyFileSync(p.join('dist/client',f),p.join(d,f))}}\"",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",

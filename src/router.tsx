@@ -1,19 +1,34 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, onlineManager } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
 
 export const getRouter = () => {
-  // Long gcTime keeps loaded data in the cache so the persisted offline copy
-  // survives navigation and app restarts.
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
         gcTime: 1000 * 60 * 60 * 24 * 7,
         staleTime: 1000 * 30,
         retry: 1,
+        networkMode: "offlineFirst",
+      },
+      mutations: {
+        networkMode: "offlineFirst",
+        retry: 2,
       },
     },
   });
+
+  if (typeof window !== "undefined") {
+    onlineManager.setEventListener((setOnline) => {
+      const handler = () => setOnline(navigator.onLine);
+      window.addEventListener("online", handler);
+      window.addEventListener("offline", handler);
+      return () => {
+        window.removeEventListener("online", handler);
+        window.removeEventListener("offline", handler);
+      };
+    });
+  }
 
   const router = createRouter({
     routeTree,

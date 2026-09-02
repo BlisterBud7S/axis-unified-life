@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#0A0F1E" />
+<title>AXIS — Offline</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:#0A0F1E;color:#e2e8f0;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:100dvh;padding:1.5rem;text-align:center;
+  }
+  .logo{
+    width:64px;height:64px;border-radius:16px;margin-bottom:2rem;
+    background:linear-gradient(135deg,#6366f1,#8b5cf6);
+    display:flex;align-items:center;justify-content:center;
+    font-size:1.75rem;font-weight:800;color:#fff;letter-spacing:-.02em;
+  }
+  h1{font-size:1.5rem;font-weight:700;letter-spacing:-.02em;margin-bottom:.5rem}
+  p{color:#94a3b8;font-size:.9rem;line-height:1.6;max-width:26rem;margin-bottom:1.5rem}
+  .btn{
+    display:inline-flex;align-items:center;gap:.5rem;
+    background:#6366f1;color:#fff;border:none;border-radius:8px;
+    padding:.65rem 1.5rem;font-size:.875rem;font-weight:600;cursor:pointer;
+    transition:background .15s;
+  }
+  .btn:hover{background:#4f46e5}
+  .btn:active{transform:scale(.97)}
+  .icon{width:18px;height:18px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .hint{margin-top:2rem;color:#475569;font-size:.75rem}
+</style>
+</head>
+<body>
+  <div class="logo">A</div>
+  <h1>You're offline</h1>
+  <p>
+    AXIS needs an internet connection for this page.
+    Pages you've visited before are still available — tap the back button to
+    see your cached data.
+  </p>
+  <button class="btn" onclick="window.location.reload()">
+    <svg class="icon" viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+    Try again
+  </button>
+  <p class="hint">Your unsaved changes will sync automatically when you reconnect.</p>
+  <script>
+    window.addEventListener("online", function() { window.location.reload(); });
+  </script>
+</body>
+</html>
