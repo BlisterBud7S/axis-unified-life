@@ -30,6 +30,7 @@ import { Route as AuthSignupRouteImport } from './routes/auth.signup'
 import { Route as LegalPrivacyRouteImport } from './routes/legal.privacy'
 import { Route as LegalRefundsRouteImport } from './routes/legal.refunds'
 import { Route as LegalTermsRouteImport } from './routes/legal.terms'
+import { Route as AuthenticatedAdminOauthSetupRouteImport } from './routes/_authenticated/admin/oauth-setup'
 import { Route as AuthenticatedCheckoutSuccessRouteImport } from './routes/_authenticated/checkout.success'
 import { Route as ApiPublicCalendarTokenRouteImport } from './routes/api/public/calendar.$token'
 import { Route as ApiPublicOauthProviderRouteImport } from './routes/api/public/oauth.$provider'
@@ -140,6 +141,12 @@ const LegalTermsRoute = LegalTermsRouteImport.update({
   path: '/legal/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAdminOauthSetupRoute =
+  AuthenticatedAdminOauthSetupRouteImport.update({
+    id: '/admin/oauth-setup',
+    path: '/admin/oauth-setup',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedCheckoutSuccessRoute =
   AuthenticatedCheckoutSuccessRouteImport.update({
     id: '/checkout/success',
@@ -184,6 +191,7 @@ export interface FileRoutesByFullPath {
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/refunds': typeof LegalRefundsRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/admin/oauth-setup': typeof AuthenticatedAdminOauthSetupRoute
   '/checkout/success': typeof AuthenticatedCheckoutSuccessRoute
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
   '/api/public/oauth/$provider': typeof ApiPublicOauthProviderRoute
@@ -210,6 +218,7 @@ export interface FileRoutesByTo {
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/refunds': typeof LegalRefundsRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/admin/oauth-setup': typeof AuthenticatedAdminOauthSetupRoute
   '/checkout/success': typeof AuthenticatedCheckoutSuccessRoute
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
   '/api/public/oauth/$provider': typeof ApiPublicOauthProviderRoute
@@ -238,6 +247,7 @@ export interface FileRoutesById {
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/refunds': typeof LegalRefundsRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/_authenticated/admin/oauth-setup': typeof AuthenticatedAdminOauthSetupRoute
   '/_authenticated/checkout/success': typeof AuthenticatedCheckoutSuccessRoute
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
   '/api/public/oauth/$provider': typeof ApiPublicOauthProviderRoute
@@ -266,6 +276,7 @@ export interface FileRouteTypes {
     | '/legal/privacy'
     | '/legal/refunds'
     | '/legal/terms'
+    | '/admin/oauth-setup'
     | '/checkout/success'
     | '/api/public/calendar/$token'
     | '/api/public/oauth/$provider'
@@ -292,6 +303,7 @@ export interface FileRouteTypes {
     | '/legal/privacy'
     | '/legal/refunds'
     | '/legal/terms'
+    | '/admin/oauth-setup'
     | '/checkout/success'
     | '/api/public/calendar/$token'
     | '/api/public/oauth/$provider'
@@ -319,6 +331,7 @@ export interface FileRouteTypes {
     | '/legal/privacy'
     | '/legal/refunds'
     | '/legal/terms'
+    | '/_authenticated/admin/oauth-setup'
     | '/_authenticated/checkout/success'
     | '/api/public/calendar/$token'
     | '/api/public/oauth/$provider'
@@ -489,6 +502,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LegalTermsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/admin/oauth-setup': {
+      id: '/_authenticated/admin/oauth-setup'
+      path: '/admin/oauth-setup'
+      fullPath: '/admin/oauth-setup'
+      preLoaderRoute: typeof AuthenticatedAdminOauthSetupRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/checkout/success': {
       id: '/_authenticated/checkout/success'
       path: '/checkout/success'
@@ -533,6 +553,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSchoolRoute: typeof AuthenticatedSchoolRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSyncRoute: typeof AuthenticatedSyncRoute
+  AuthenticatedAdminOauthSetupRoute: typeof AuthenticatedAdminOauthSetupRoute
   AuthenticatedCheckoutSuccessRoute: typeof AuthenticatedCheckoutSuccessRoute
 }
 
@@ -549,6 +570,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSchoolRoute: AuthenticatedSchoolRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSyncRoute: AuthenticatedSyncRoute,
+  AuthenticatedAdminOauthSetupRoute: AuthenticatedAdminOauthSetupRoute,
   AuthenticatedCheckoutSuccessRoute: AuthenticatedCheckoutSuccessRoute,
 }
 
