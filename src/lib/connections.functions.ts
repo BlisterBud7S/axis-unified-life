@@ -7,11 +7,42 @@ export const listMyConnections = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("user_connections")
-      .select("id, connector_id, created_at, updated_at")
+      .select("id, connector_id, oauth_provider, created_at, updated_at")
       .eq("user_id", context.userId)
       .order("created_at", { ascending: true });
     if (error) throw new Error(error.message);
     return data ?? [];
+  });
+
+export const startOAuth = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) =>
+    z
+      .object({
+        connectorId: z.string().min(1).max(100),
+        providerId: z.string().min(1).max(100),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { initiateOAuth } = await import("@/lib/oauth.server");
+    return initiateOAuth({
+      supabase: context.supabase,
+      userId: context.userId,
+      connectorId: data.connectorId,
+      providerId: data.providerId,
+    });
+  });
+
+export const checkOAuthConfigured = createServerFn({ method: "GET" })
+  .handler(async () => {
+    const { getAllOAuthProviders, isOAuthConfigured } = await import("@/lib/oauth-providers");
+    const providers = getAllOAuthProviders();
+    const configured: Record<string, boolean> = {};
+    for (const p of providers) {
+      configured[p.id] = isOAuthConfigured(p.id);
+    }
+    return configured;
   });
 
 export const saveConnection = createServerFn({ method: "POST" })

@@ -32,6 +32,7 @@ import { Route as LegalRefundsRouteImport } from './routes/legal.refunds'
 import { Route as LegalTermsRouteImport } from './routes/legal.terms'
 import { Route as AuthenticatedCheckoutSuccessRouteImport } from './routes/_authenticated/checkout.success'
 import { Route as ApiPublicCalendarTokenRouteImport } from './routes/api/public/calendar.$token'
+import { Route as ApiPublicOauthProviderRouteImport } from './routes/api/public/oauth.$provider'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
 const IndexRoute = IndexRouteImport.update({
@@ -150,6 +151,11 @@ const ApiPublicCalendarTokenRoute = ApiPublicCalendarTokenRouteImport.update({
   path: '/api/public/calendar/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicOauthProviderRoute = ApiPublicOauthProviderRouteImport.update({
+  id: '/api/public/oauth/$provider',
+  path: '/api/public/oauth/$provider',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
@@ -180,6 +186,7 @@ export interface FileRoutesByFullPath {
   '/legal/terms': typeof LegalTermsRoute
   '/checkout/success': typeof AuthenticatedCheckoutSuccessRoute
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
+  '/api/public/oauth/$provider': typeof ApiPublicOauthProviderRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
@@ -205,6 +212,7 @@ export interface FileRoutesByTo {
   '/legal/terms': typeof LegalTermsRoute
   '/checkout/success': typeof AuthenticatedCheckoutSuccessRoute
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
+  '/api/public/oauth/$provider': typeof ApiPublicOauthProviderRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
@@ -232,6 +240,7 @@ export interface FileRoutesById {
   '/legal/terms': typeof LegalTermsRoute
   '/_authenticated/checkout/success': typeof AuthenticatedCheckoutSuccessRoute
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
+  '/api/public/oauth/$provider': typeof ApiPublicOauthProviderRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
@@ -259,6 +268,7 @@ export interface FileRouteTypes {
     | '/legal/terms'
     | '/checkout/success'
     | '/api/public/calendar/$token'
+    | '/api/public/oauth/$provider'
     | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -284,6 +294,7 @@ export interface FileRouteTypes {
     | '/legal/terms'
     | '/checkout/success'
     | '/api/public/calendar/$token'
+    | '/api/public/oauth/$provider'
     | '/api/public/payments/webhook'
   id:
     | '__root__'
@@ -310,6 +321,7 @@ export interface FileRouteTypes {
     | '/legal/terms'
     | '/_authenticated/checkout/success'
     | '/api/public/calendar/$token'
+    | '/api/public/oauth/$provider'
     | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
@@ -324,6 +336,7 @@ export interface RootRouteChildren {
   LegalRefundsRoute: typeof LegalRefundsRoute
   LegalTermsRoute: typeof LegalTermsRoute
   ApiPublicCalendarTokenRoute: typeof ApiPublicCalendarTokenRoute
+  ApiPublicOauthProviderRoute: typeof ApiPublicOauthProviderRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
@@ -490,6 +503,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCalendarTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/oauth/$provider': {
+      id: '/api/public/oauth/$provider'
+      path: '/api/public/oauth/$provider'
+      fullPath: '/api/public/oauth/$provider'
+      preLoaderRoute: typeof ApiPublicOauthProviderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/payments/webhook': {
       id: '/api/public/payments/webhook'
       path: '/api/public/payments/webhook'
@@ -546,18 +566,9 @@ const rootRouteChildren: RootRouteChildren = {
   LegalRefundsRoute: LegalRefundsRoute,
   LegalTermsRoute: LegalTermsRoute,
   ApiPublicCalendarTokenRoute: ApiPublicCalendarTokenRoute,
+  ApiPublicOauthProviderRoute: ApiPublicOauthProviderRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
