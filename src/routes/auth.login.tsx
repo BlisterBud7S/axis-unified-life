@@ -3,7 +3,7 @@ import { Card } from "@/components/axis/Card";
 import { Input, Label } from "@/components/axis/Field";
 import { supabase } from "@/integrations/supabase/client";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -30,44 +30,33 @@ function GoogleIcon({ className }: { className?: string }) {
   );
 }
 
-let firebaseReady: Promise<{
-  auth: import("firebase/auth").Auth;
-  provider: import("firebase/auth").GoogleAuthProvider;
-  signInWithPopup: typeof import("firebase/auth").signInWithPopup;
-  firebaseGoogleSignIn: typeof import("@/lib/firebase-auth.functions").firebaseGoogleSignIn;
-}> | null = null;
-
-function preloadFirebase() {
-  if (!firebaseReady) {
-    firebaseReady = Promise.all([
-      import("@/lib/firebase"),
-      import("firebase/auth"),
-      import("@/lib/firebase-auth.functions"),
-    ]).then(([fb, authMod, fnMod]) => ({
-      auth: fb.firebaseAuth,
-      provider: fb.googleProvider,
-      signInWithPopup: authMod.signInWithPopup,
-      firebaseGoogleSignIn: fnMod.firebaseGoogleSignIn,
-    }));
-  }
-  return firebaseReady;
+async function startGoogleRedirect() {
+  const { firebaseAuth, googleProvider } = await import("@/lib/firebase");
+  const { signInWithRedirect } = await import("firebase/auth");
+  await signInWithRedirect(firebaseAuth, googleProvider);
 }
 
-async function signInWithGoogle() {
-  const { auth, provider, signInWithPopup, firebaseGoogleSignIn } =
-    await preloadFirebase();
+async function handleRedirectResult(navigate: (opts: { to: string }) => void) {
+  try {
+    const { firebaseAuth } = await import("@/lib/firebase");
+    const { getRedirectResult } = await import("firebase/auth");
+    const result = await getRedirectResult(firebaseAuth);
+    if (!result) return;
 
-  const result = await signInWithPopup(auth, provider);
-  const idToken = await result.user.getIdToken();
+    const { firebaseGoogleSignIn } = await import("@/lib/firebase-auth.functions");
+    const idToken = await result.user.getIdToken();
+    const tokens = await firebaseGoogleSignIn({ data: { idToken } });
 
-  const tokens = await firebaseGoogleSignIn({ data: { idToken } });
-
-  const { error } = await supabase.auth.setSession({
-    access_token: tokens.access_token,
-    refresh_token: tokens.refresh_token,
-  });
-
-  if (error) throw error;
+    const { error } = await supabase.auth.setSession({
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
+    });
+    if (error) throw error;
+    navigate({ to: "/home" });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Google sign-in failed";
+    toast.error(msg);
+  }
 }
 
 function LoginPage() {
@@ -76,6 +65,10 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
+
+  useEffect(() => {
+    handleRedirectResult(navigate);
+  }, [navigate]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -92,12 +85,10 @@ function LoginPage() {
   async function handleGoogleSignIn() {
     setGoogleBusy(true);
     try {
-      await signInWithGoogle();
-      navigate({ to: "/home" });
+      await startGoogleRedirect();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Google sign-in failed";
-      if (!msg.includes("popup-closed")) toast.error(msg);
-    } finally {
+      toast.error(msg);
       setGoogleBusy(false);
     }
   }
@@ -111,8 +102,6 @@ function LoginPage() {
         </div>
 
         <button
-          onMouseEnter={() => preloadFirebase()}
-          onTouchStart={() => preloadFirebase()}
           onClick={handleGoogleSignIn}
           disabled={googleBusy}
           className="flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-medium text-[#1f1f1f] transition-colors hover:bg-gray-50 disabled:opacity-50 dark:bg-[#131314] dark:text-[#e3e3e3] dark:border-[#747775] dark:hover:bg-[#1f1f1f]"
