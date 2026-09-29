@@ -2,8 +2,11 @@ import { Button } from "@/components/axis/Button";
 import { Card } from "@/components/axis/Card";
 import { Input, Label } from "@/components/axis/Field";
 import { supabase } from "@/integrations/supabase/client";
+import { firebaseAuth, googleProvider } from "@/lib/firebase";
+import { firebaseGoogleSignIn } from "@/lib/firebase-auth.functions";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { signInWithPopup } from "firebase/auth";
+import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -30,45 +33,12 @@ function GoogleIcon({ className }: { className?: string }) {
   );
 }
 
-async function startGoogleRedirect() {
-  const { firebaseAuth, googleProvider } = await import("@/lib/firebase");
-  const { signInWithRedirect } = await import("firebase/auth");
-  await signInWithRedirect(firebaseAuth, googleProvider);
-}
-
-async function handleRedirectResult(navigate: (opts: { to: string }) => void) {
-  try {
-    const { firebaseAuth } = await import("@/lib/firebase");
-    const { getRedirectResult } = await import("firebase/auth");
-    const result = await getRedirectResult(firebaseAuth);
-    if (!result) return;
-
-    const { firebaseGoogleSignIn } = await import("@/lib/firebase-auth.functions");
-    const idToken = await result.user.getIdToken();
-    const tokens = await firebaseGoogleSignIn({ data: { idToken } });
-
-    const { error } = await supabase.auth.setSession({
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token,
-    });
-    if (error) throw error;
-    navigate({ to: "/home" });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Google sign-in failed";
-    toast.error(msg);
-  }
-}
-
 function LoginPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
-
-  useEffect(() => {
-    handleRedirectResult(navigate);
-  }, [navigate]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -85,10 +55,19 @@ function LoginPage() {
   async function handleGoogleSignIn() {
     setGoogleBusy(true);
     try {
-      await startGoogleRedirect();
+      const result = await signInWithPopup(firebaseAuth, googleProvider);
+      const idToken = await result.user.getIdToken();
+      const tokens = await firebaseGoogleSignIn({ data: { idToken } });
+      const { error } = await supabase.auth.setSession({
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+      });
+      if (error) throw error;
+      navigate({ to: "/home" });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Google sign-in failed";
-      toast.error(msg);
+      if (!msg.includes("popup-closed")) toast.error(msg);
+    } finally {
       setGoogleBusy(false);
     }
   }
