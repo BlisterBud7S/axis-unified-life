@@ -49,13 +49,16 @@ function GoogleIcon({ className }: { className?: string }) {
 async function signUpWithGoogle() {
   const { firebaseAuth, googleProvider } = await import("@/lib/firebase");
   const { signInWithPopup } = await import("firebase/auth");
+  const { firebaseGoogleSignIn } = await import("@/lib/firebase-auth.functions");
 
   const result = await signInWithPopup(firebaseAuth, googleProvider);
   const idToken = await result.user.getIdToken();
 
-  const { error } = await supabase.auth.signInWithIdToken({
-    provider: "google",
-    token: idToken,
+  const tokens = await firebaseGoogleSignIn({ data: { idToken } });
+
+  const { error } = await supabase.auth.setSession({
+    access_token: tokens.access_token,
+    refresh_token: tokens.refresh_token,
   });
 
   if (error) throw error;
