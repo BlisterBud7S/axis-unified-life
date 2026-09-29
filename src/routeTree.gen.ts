@@ -30,8 +30,10 @@ import { Route as AuthSignupRouteImport } from './routes/auth.signup'
 import { Route as LegalPrivacyRouteImport } from './routes/legal.privacy'
 import { Route as LegalRefundsRouteImport } from './routes/legal.refunds'
 import { Route as LegalTermsRouteImport } from './routes/legal.terms'
+import { Route as AuthenticatedAdminOauthSetupRouteImport } from './routes/_authenticated/admin/oauth-setup'
 import { Route as AuthenticatedCheckoutSuccessRouteImport } from './routes/_authenticated/checkout.success'
 import { Route as ApiPublicCalendarTokenRouteImport } from './routes/api/public/calendar.$token'
+import { Route as ApiPublicOauthProviderRouteImport } from './routes/api/public/oauth.$provider'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
 const IndexRoute = IndexRouteImport.update({
@@ -139,6 +141,12 @@ const LegalTermsRoute = LegalTermsRouteImport.update({
   path: '/legal/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAdminOauthSetupRoute =
+  AuthenticatedAdminOauthSetupRouteImport.update({
+    id: '/admin/oauth-setup',
+    path: '/admin/oauth-setup',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedCheckoutSuccessRoute =
   AuthenticatedCheckoutSuccessRouteImport.update({
     id: '/checkout/success',
@@ -148,6 +156,11 @@ const AuthenticatedCheckoutSuccessRoute =
 const ApiPublicCalendarTokenRoute = ApiPublicCalendarTokenRouteImport.update({
   id: '/api/public/calendar/$token',
   path: '/api/public/calendar/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicOauthProviderRoute = ApiPublicOauthProviderRouteImport.update({
+  id: '/api/public/oauth/$provider',
+  path: '/api/public/oauth/$provider',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicPaymentsWebhookRoute =
@@ -178,8 +191,10 @@ export interface FileRoutesByFullPath {
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/refunds': typeof LegalRefundsRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/admin/oauth-setup': typeof AuthenticatedAdminOauthSetupRoute
   '/checkout/success': typeof AuthenticatedCheckoutSuccessRoute
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
+  '/api/public/oauth/$provider': typeof ApiPublicOauthProviderRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
@@ -203,8 +218,10 @@ export interface FileRoutesByTo {
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/refunds': typeof LegalRefundsRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/admin/oauth-setup': typeof AuthenticatedAdminOauthSetupRoute
   '/checkout/success': typeof AuthenticatedCheckoutSuccessRoute
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
+  '/api/public/oauth/$provider': typeof ApiPublicOauthProviderRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
@@ -230,8 +247,10 @@ export interface FileRoutesById {
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/refunds': typeof LegalRefundsRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/_authenticated/admin/oauth-setup': typeof AuthenticatedAdminOauthSetupRoute
   '/_authenticated/checkout/success': typeof AuthenticatedCheckoutSuccessRoute
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
+  '/api/public/oauth/$provider': typeof ApiPublicOauthProviderRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
@@ -257,8 +276,10 @@ export interface FileRouteTypes {
     | '/legal/privacy'
     | '/legal/refunds'
     | '/legal/terms'
+    | '/admin/oauth-setup'
     | '/checkout/success'
     | '/api/public/calendar/$token'
+    | '/api/public/oauth/$provider'
     | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -282,8 +303,10 @@ export interface FileRouteTypes {
     | '/legal/privacy'
     | '/legal/refunds'
     | '/legal/terms'
+    | '/admin/oauth-setup'
     | '/checkout/success'
     | '/api/public/calendar/$token'
+    | '/api/public/oauth/$provider'
     | '/api/public/payments/webhook'
   id:
     | '__root__'
@@ -308,8 +331,10 @@ export interface FileRouteTypes {
     | '/legal/privacy'
     | '/legal/refunds'
     | '/legal/terms'
+    | '/_authenticated/admin/oauth-setup'
     | '/_authenticated/checkout/success'
     | '/api/public/calendar/$token'
+    | '/api/public/oauth/$provider'
     | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
@@ -324,6 +349,7 @@ export interface RootRouteChildren {
   LegalRefundsRoute: typeof LegalRefundsRoute
   LegalTermsRoute: typeof LegalTermsRoute
   ApiPublicCalendarTokenRoute: typeof ApiPublicCalendarTokenRoute
+  ApiPublicOauthProviderRoute: typeof ApiPublicOauthProviderRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
@@ -476,6 +502,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LegalTermsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/admin/oauth-setup': {
+      id: '/_authenticated/admin/oauth-setup'
+      path: '/admin/oauth-setup'
+      fullPath: '/admin/oauth-setup'
+      preLoaderRoute: typeof AuthenticatedAdminOauthSetupRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/checkout/success': {
       id: '/_authenticated/checkout/success'
       path: '/checkout/success'
@@ -488,6 +521,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/calendar/$token'
       fullPath: '/api/public/calendar/$token'
       preLoaderRoute: typeof ApiPublicCalendarTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/oauth/$provider': {
+      id: '/api/public/oauth/$provider'
+      path: '/api/public/oauth/$provider'
+      fullPath: '/api/public/oauth/$provider'
+      preLoaderRoute: typeof ApiPublicOauthProviderRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/payments/webhook': {
@@ -513,6 +553,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSchoolRoute: typeof AuthenticatedSchoolRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSyncRoute: typeof AuthenticatedSyncRoute
+  AuthenticatedAdminOauthSetupRoute: typeof AuthenticatedAdminOauthSetupRoute
   AuthenticatedCheckoutSuccessRoute: typeof AuthenticatedCheckoutSuccessRoute
 }
 
@@ -529,6 +570,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSchoolRoute: AuthenticatedSchoolRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSyncRoute: AuthenticatedSyncRoute,
+  AuthenticatedAdminOauthSetupRoute: AuthenticatedAdminOauthSetupRoute,
   AuthenticatedCheckoutSuccessRoute: AuthenticatedCheckoutSuccessRoute,
 }
 
@@ -546,18 +588,9 @@ const rootRouteChildren: RootRouteChildren = {
   LegalRefundsRoute: LegalRefundsRoute,
   LegalTermsRoute: LegalTermsRoute,
   ApiPublicCalendarTokenRoute: ApiPublicCalendarTokenRoute,
+  ApiPublicOauthProviderRoute: ApiPublicOauthProviderRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

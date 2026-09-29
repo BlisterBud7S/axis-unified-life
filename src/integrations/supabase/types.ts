@@ -763,7 +763,12 @@ export type Database = {
           id: string
           user_id: string
           connector_id: string
-          api_key: string
+          api_key: string | null
+          access_token: string | null
+          refresh_token: string | null
+          token_expires_at: string | null
+          oauth_provider: string | null
+          oauth_metadata: Record<string, unknown> | null
           created_at: string
           updated_at: string
         }
@@ -771,7 +776,12 @@ export type Database = {
           id?: string
           user_id: string
           connector_id: string
-          api_key: string
+          api_key?: string | null
+          access_token?: string | null
+          refresh_token?: string | null
+          token_expires_at?: string | null
+          oauth_provider?: string | null
+          oauth_metadata?: Record<string, unknown> | null
           created_at?: string
           updated_at?: string
         }
@@ -779,9 +789,47 @@ export type Database = {
           id?: string
           user_id?: string
           connector_id?: string
-          api_key?: string
+          api_key?: string | null
+          access_token?: string | null
+          refresh_token?: string | null
+          token_expires_at?: string | null
+          oauth_provider?: string | null
+          oauth_metadata?: Record<string, unknown> | null
           created_at?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      oauth_states: {
+        Row: {
+          id: string
+          user_id: string
+          provider: string
+          connector_id: string
+          state: string
+          code_verifier: string | null
+          redirect_uri: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          provider: string
+          connector_id: string
+          state: string
+          code_verifier?: string | null
+          redirect_uri: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          provider?: string
+          connector_id?: string
+          state?: string
+          code_verifier?: string | null
+          redirect_uri?: string
+          created_at?: string
         }
         Relationships: []
       }

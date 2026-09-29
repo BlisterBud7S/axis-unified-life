@@ -5,22 +5,29 @@ import {
   listMyConnections,
   saveConnection,
   deleteConnection,
+  startOAuth,
+  checkOAuthConfigured,
 } from "@/lib/connections.functions";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Bot,
   Check,
   Cloud,
+  CreditCard,
   Database,
   ExternalLink,
   Eye,
   EyeOff,
+  FolderOpen,
   HeartPulse,
   Info,
   Laptop,
+  Loader2,
   Lock,
+  Music,
+  Palette,
   Plug,
   Trash2,
   X,
@@ -34,7 +41,7 @@ export const Route = createFileRoute("/_authenticated/connections")({
       {
         name: "description",
         content:
-          "Connect Google, Microsoft, GitHub, Notion, Slack, Claude, ChatGPT and more so AXIS can work with your own files, mail, calendar and data.",
+          "Connect Google, Microsoft, GitHub, Notion, Slack, Canva, Spotify, Figma and more so AXIS can work with your own files, mail, calendar and data.",
       },
       { property: "og:title", content: "Connections — link your apps to AXIS" },
       {
@@ -52,6 +59,10 @@ const GROUP_ICONS: Record<string, typeof Plug> = {
   Google: Cloud,
   Microsoft: Laptop,
   Work: Plug,
+  Creative: Palette,
+  Social: Music,
+  Storage: FolderOpen,
+  Payments: CreditCard,
   Data: Database,
   Health: HeartPulse,
   AI: Bot,
@@ -59,9 +70,12 @@ const GROUP_ICONS: Record<string, typeof Plug> = {
 
 const GROUP_DESCRIPTIONS: Record<string, string> = {
   Google: "Connect your Google Workspace apps — files, mail, calendar, sheets and slides.",
-  Microsoft:
-    "Link your Microsoft 365 apps — Outlook, OneDrive, Word, Excel, Teams and more.",
+  Microsoft: "Link your Microsoft 365 apps — Outlook, OneDrive, Word, Excel, Teams and more.",
   Work: "Bring in context from your dev tools, project management and communication platforms.",
+  Creative: "Design tools — create and manage visual content directly from AXIS.",
+  Social: "Music, social and entertainment platforms.",
+  Storage: "Cloud storage and file management services.",
+  Payments: "Payment processing and financial infrastructure.",
   Data: "Query your own data warehouses and lakehouse tables directly from AXIS.",
   Health: "Sync wearable and health app data into your AXIS Health dashboard.",
   AI: "Import conversations from other AI platforms and use your own API keys for direct model access.",
@@ -74,7 +88,25 @@ function ConnectionsPage() {
     queryFn: () => listMyConnections(),
   });
 
+  const { data: oauthConfigured = {} } = useQuery({
+    queryKey: ["oauth-configured"],
+    queryFn: () => checkOAuthConfigured(),
+    staleTime: 60_000,
+  });
+
   const connectedIds = new Set(connections.map((c) => c.connector_id));
+
+  // Listen for OAuth popup completion
+  useEffect(() => {
+    function onMessage(e: MessageEvent) {
+      if (e.data?.type === "axis-oauth-complete" && e.data.success) {
+        qc.invalidateQueries({ queryKey: ["my-connections"] });
+        toast.success("Service connected!");
+      }
+    }
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [qc]);
 
   return (
     <>
@@ -89,9 +121,9 @@ function ConnectionsPage() {
           <div className="space-y-1 text-sm text-muted-foreground">
             <p className="font-medium text-foreground">How connections work</p>
             <p>
-              Connectors marked with a key icon accept your own API key — paste it in and
-              AXIS will use it for AI calls. OAuth connectors (Google, Microsoft, etc.)
-              need the site owner to configure OAuth apps first.
+              Connectors marked with a key icon accept your own API key — paste it in and AXIS
+              will use it for AI calls. OAuth connectors open a popup where you sign in directly
+              with that service to grant AXIS access.
             </p>
           </div>
         </div>
@@ -100,6 +132,7 @@ function ConnectionsPage() {
       <div className="space-y-8">
         {CONNECTOR_GROUPS.map((group) => {
           const items = CONNECTORS.filter((c) => c.group === group);
+          if (!items.length) return null;
           const Icon = GROUP_ICONS[group] ?? Plug;
           return (
             <div key={group}>
@@ -122,6 +155,7 @@ function ConnectionsPage() {
                     key={c.id}
                     connector={c}
                     isConnected={connectedIds.has(c.id)}
+                    oauthReady={!!(c.oauthProvider && oauthConfigured[c.oauthProvider])}
                     onChanged={() =>
                       qc.invalidateQueries({ queryKey: ["my-connections"] })
                     }
@@ -139,10 +173,12 @@ function ConnectionsPage() {
 function ConnectorCard({
   connector: c,
   isConnected,
+  oauthReady,
   onChanged,
 }: {
   connector: (typeof CONNECTORS)[number];
   isConnected: boolean;
+  oauthReady: boolean;
   onChanged: () => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -169,28 +205,21 @@ function ConnectorCard({
     onError: (e) => toast.error(e.message),
   });
 
+  const oauthMut = useMutation({
+    mutationFn: () =>
+      startOAuth({ data: { connectorId: c.id, providerId: c.oauthProvider! } }),
+    onSuccess: (result) => {
+      window.open(result.url, "axis-oauth", "width=600,height=700,popup=yes");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
   const handleSave = useCallback(() => {
     if (!key.trim()) return;
     saveMut.mutate();
   }, [key, saveMut]);
 
-  if (c.authType === "oauth") {
-    return (
-      <Card className="flex items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2 font-medium">
-            <Plug className="h-4 w-4 text-primary" />
-            {c.name}
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">{c.blurb}</p>
-        </div>
-        <span className="flex shrink-0 items-center gap-1 rounded-full border border-border px-2 py-1 text-[11px] text-muted-foreground">
-          <Lock className="h-3 w-3" /> OAuth required
-        </span>
-      </Card>
-    );
-  }
-
+  // ---- Connected state ----
   if (isConnected && !editing) {
     return (
       <Card className="flex items-start justify-between gap-3">
@@ -218,6 +247,51 @@ function ConnectorCard({
     );
   }
 
+  // ---- OAuth connector ----
+  if (c.authType === "oauth") {
+    if (!c.oauthProvider || !oauthReady) {
+      return (
+        <Card className="flex items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 font-medium">
+              <Plug className="h-4 w-4 text-primary" />
+              {c.name}
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">{c.blurb}</p>
+          </div>
+          <span className="flex shrink-0 items-center gap-1 rounded-full border border-border px-2 py-1 text-[11px] text-muted-foreground">
+            <Lock className="h-3 w-3" /> Coming soon
+          </span>
+        </Card>
+      );
+    }
+
+    return (
+      <Card className="flex items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2 font-medium">
+            <Plug className="h-4 w-4 text-primary" />
+            {c.name}
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">{c.blurb}</p>
+        </div>
+        <button
+          onClick={() => oauthMut.mutate()}
+          disabled={oauthMut.isPending}
+          className="flex shrink-0 items-center gap-1.5 rounded-lg border border-primary/40 px-2.5 py-1 text-[11px] font-medium text-primary hover:bg-primary/10 disabled:opacity-50"
+        >
+          {oauthMut.isPending ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <ExternalLink className="h-3 w-3" />
+          )}
+          Connect
+        </button>
+      </Card>
+    );
+  }
+
+  // ---- API key editing ----
   if (editing) {
     return (
       <Card className="space-y-3">
@@ -282,6 +356,7 @@ function ConnectorCard({
     );
   }
 
+  // ---- API key not connected ----
   return (
     <Card className="flex items-start justify-between gap-3">
       <div>

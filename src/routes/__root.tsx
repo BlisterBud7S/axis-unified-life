@@ -13,6 +13,7 @@ import { Toaster } from "sonner";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthProvider } from "../lib/auth";
+import { useNativeSetup } from "../hooks/use-native";
 import { OfflineCacheProvider } from "../lib/offline-cache";
 import { OfflineBanner } from "../components/axis/OfflineBanner";
 import { registerOfflineSupport } from "../lib/offline";
@@ -82,7 +83,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { title: "AXIS — Your personal life operating system" },
       {
         name: "description",
@@ -139,6 +140,7 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  useNativeSetup();
 
   useEffect(() => {
     registerOfflineSupport();
