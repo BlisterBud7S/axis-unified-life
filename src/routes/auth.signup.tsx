@@ -46,12 +46,34 @@ function GoogleIcon({ className }: { className?: string }) {
   );
 }
 
-async function signUpWithGoogle() {
-  const { firebaseAuth, googleProvider } = await import("@/lib/firebase");
-  const { signInWithPopup } = await import("firebase/auth");
-  const { firebaseGoogleSignIn } = await import("@/lib/firebase-auth.functions");
+let firebaseReady: Promise<{
+  auth: import("firebase/auth").Auth;
+  provider: import("firebase/auth").GoogleAuthProvider;
+  signInWithPopup: typeof import("firebase/auth").signInWithPopup;
+  firebaseGoogleSignIn: typeof import("@/lib/firebase-auth.functions").firebaseGoogleSignIn;
+}> | null = null;
 
-  const result = await signInWithPopup(firebaseAuth, googleProvider);
+function preloadFirebase() {
+  if (!firebaseReady) {
+    firebaseReady = Promise.all([
+      import("@/lib/firebase"),
+      import("firebase/auth"),
+      import("@/lib/firebase-auth.functions"),
+    ]).then(([fb, authMod, fnMod]) => ({
+      auth: fb.firebaseAuth,
+      provider: fb.googleProvider,
+      signInWithPopup: authMod.signInWithPopup,
+      firebaseGoogleSignIn: fnMod.firebaseGoogleSignIn,
+    }));
+  }
+  return firebaseReady;
+}
+
+async function signUpWithGoogle() {
+  const { auth, provider, signInWithPopup, firebaseGoogleSignIn } =
+    await preloadFirebase();
+
+  const result = await signInWithPopup(auth, provider);
   const idToken = await result.user.getIdToken();
 
   const tokens = await firebaseGoogleSignIn({ data: { idToken } });
@@ -120,6 +142,8 @@ function SignupPage() {
         </div>
 
         <button
+          onMouseEnter={() => preloadFirebase()}
+          onTouchStart={() => preloadFirebase()}
           onClick={handleGoogleSignUp}
           disabled={googleBusy}
           className="flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-medium text-[#1f1f1f] transition-colors hover:bg-gray-50 disabled:opacity-50 dark:bg-[#131314] dark:text-[#e3e3e3] dark:border-[#747775] dark:hover:bg-[#1f1f1f]"
