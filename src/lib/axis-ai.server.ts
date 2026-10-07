@@ -411,16 +411,35 @@ export type ScheduleData = {
 
 const SCHEDULE_SYSTEM = `You are a schedule designer. The user will describe their weekly routine in plain words. Parse it into a structured weekly schedule.
 
+Reply with ONLY a JSON object (no markdown, no backticks, no explanation) matching this shape:
+{
+  "name": "string — short title like Weekly Routine",
+  "days": [
+    {
+      "day": "Monday",
+      "tag": "string — short character tag like Heavy Training or School Focus",
+      "blocks": [
+        {
+          "time": "6:00 AM – 7:00 AM",
+          "label": "string — activity name",
+          "type": "school | sport | workout | meal | rest | study | work | personal | other",
+          "notes": "string — extra detail or empty string"
+        }
+      ]
+    }
+  ]
+}
+
 Rules:
-- Extract every activity mentioned with realistic time slots (use "HH:MM – HH:MM" 12h format like "6:00 AM – 7:00 AM").
-- Assign each block a type: school, sport, workout, meal, rest, study, work, personal, or other.
+- Extract every activity mentioned with realistic time slots (use "HH:MM AM/PM – HH:MM AM/PM" format).
+- Assign each block a type from: school, sport, workout, meal, rest, study, work, personal, other.
 - Give each day a short tag describing its character (e.g. "Heavy Training", "School Focus", "Rest Day", "Game Day").
 - Fill in reasonable gaps — if the user mentions "I eat dinner around 7" give it a 30-min slot.
 - If the user describes a general pattern (like "school Mon-Fri 8-3"), apply it to all relevant days.
-- Include all 7 days. If a day isn't mentioned, infer a reasonable routine or mark it as a rest day.
-- The "name" field should be a short title for the schedule (e.g. "Weekly Routine", "Training Schedule").
+- Include all 7 days (Monday through Sunday). If a day isn't mentioned, infer a reasonable routine or mark it as a rest day.
 - notes can include detail like workout exercises, what meal, room numbers, etc. Use empty string if none.
-- Be generous with detail in notes when the user provides specifics.`;
+- Be generous with detail in notes when the user provides specifics.
+- Output ONLY valid JSON. No other text.`;
 
 export async function formatSchedule(opts: {
   supabase: Client;
@@ -437,7 +456,6 @@ export async function formatSchedule(opts: {
         { role: "system", content: SCHEDULE_SYSTEM },
         { role: "user", content: opts.text },
       ],
-      jsonSchema: { name: "weekly_schedule", schema: SCHEDULE_SCHEMA as unknown as Record<string, unknown> },
       userId: opts.userId,
       supabase: opts.supabase,
     });
