@@ -442,22 +442,25 @@ export async function formatSchedule(opts: {
       supabase: opts.supabase,
     });
 
-  let raw: string;
-  try {
-    raw = await makeCall(model.underlying);
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : String(e);
-    if (msg.includes("503") || msg.includes("UNAVAILABLE") || msg.includes("overloaded")) {
-      await new Promise((r) => setTimeout(r, 2000));
-      try {
-        raw = await makeCall(model.underlying);
-      } catch {
-        raw = await makeCall("google/gemini-2.5-flash");
+  const fallbacks = [model.underlying, "google/gemini-2.5-flash", "google/gemini-2.0-flash"];
+
+  let raw: string | undefined;
+  let lastErr: unknown;
+  for (const engine of fallbacks) {
+    try {
+      raw = await makeCall(engine);
+      break;
+    } catch (e: unknown) {
+      lastErr = e;
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes("503") || msg.includes("UNAVAILABLE") || msg.includes("overloaded")) {
+        await new Promise((r) => setTimeout(r, 1500));
+        continue;
       }
-    } else {
       throw e;
     }
   }
+  if (raw === undefined) throw lastErr;
 
   const schedule = parseJson<ScheduleData>(raw);
   await logChat(opts.supabase, opts.userId, {
