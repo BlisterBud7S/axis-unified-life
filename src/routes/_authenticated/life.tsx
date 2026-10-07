@@ -7,8 +7,8 @@ import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, Flame, Plus, Star, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Check, Clock, Download, Flame, Plus, Star, Trash2 } from "lucide-react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/life")({
@@ -35,7 +35,7 @@ const HABITS = ["Workout", "Read", "Sleep 7h+", "No junk food", "Study", "Medita
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
-type Tab = "tasks" | "habits";
+type Tab = "tasks" | "habits" | "schedule";
 
 function LifePage() {
   const [tab, setTab] = useState<Tab>("tasks");
@@ -47,7 +47,7 @@ function LifePage() {
         subtitle="Tasks, priorities and the habits that hold the week together"
         action={
           <div className="flex gap-1 rounded-xl border border-border p-1">
-            {(["tasks", "habits"] as Tab[]).map((t) => (
+            {(["tasks", "habits", "schedule"] as Tab[]).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -64,7 +64,7 @@ function LifePage() {
           </div>
         }
       />
-      {tab === "tasks" ? <TasksTab /> : <HabitsTab />}
+      {tab === "tasks" ? <TasksTab /> : tab === "habits" ? <HabitsTab /> : <ScheduleTab />}
     </>
   );
 }
@@ -474,6 +474,336 @@ function HabitsTab() {
       </Card>
       <p className="text-xs text-muted-foreground">
         Streaks count consecutive days up to today across the last 30 days.
+      </p>
+    </div>
+  );
+}
+
+const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
+const BLOCK_CATEGORIES = [
+  { name: "School", color: "#6366f1" },
+  { name: "Workout", color: "#22c55e" },
+  { name: "Study", color: "#3b82f6" },
+  { name: "Work", color: "#f59e0b" },
+  { name: "Personal", color: "#ec4899" },
+  { name: "Rest", color: "#8b5cf6" },
+  { name: "Other", color: "#64748b" },
+] as const;
+
+type Block = {
+  id: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  title: string;
+  category: string;
+  color: string;
+};
+
+const fmtTime = (t: string) => {
+  const [h = "0", m] = t.split(":");
+  const hour = parseInt(h, 10);
+  const ampm = hour >= 12 ? "PM" : "AM";
+  const h12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+  return `${h12}:${m} ${ampm}`;
+};
+
+function generateScheduleHTML(blocks: Block[], userName: string) {
+  const grouped: Record<number, Block[]> = {};
+  for (const b of blocks) {
+    (grouped[b.day_of_week] ??= []).push(b);
+  }
+  for (const day of Object.keys(grouped)) {
+    grouped[Number(day)]!.sort((a, b) => a.start_time.localeCompare(b.start_time));
+  }
+
+  const dayRows = DAYS.map((dayName, i) => {
+    const dayBlocks = grouped[i] ?? [];
+    if (dayBlocks.length === 0) {
+      return `<tr><td class="day">${dayName}</td><td class="blocks"><span class="free">Free day</span></td></tr>`;
+    }
+    const items = dayBlocks
+      .map(
+        (b) =>
+          `<div class="block" style="border-left:4px solid ${b.color};background:${b.color}12">
+            <span class="time">${fmtTime(b.start_time)} – ${fmtTime(b.end_time)}</span>
+            <span class="title">${b.title}</span>
+            <span class="cat">${b.category}</span>
+          </div>`,
+      )
+      .join("");
+    return `<tr><td class="day">${dayName}</td><td class="blocks">${items}</td></tr>`;
+  }).join("");
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${userName}'s Weekly Schedule — AXIS</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0a0a0f;color:#e4e4e7;padding:32px 24px;min-height:100vh}
+  .container{max-width:900px;margin:0 auto}
+  .header{text-align:center;margin-bottom:32px}
+  .header .brand{font-size:11px;letter-spacing:0.3em;text-transform:uppercase;color:#818cf8;margin-bottom:8px}
+  .header h1{font-size:28px;font-weight:600}
+  .header .sub{font-size:13px;color:#71717a;margin-top:4px}
+  table{width:100%;border-collapse:collapse}
+  tr{border-bottom:1px solid #27272a}
+  td{padding:16px 12px;vertical-align:top}
+  .day{width:120px;font-weight:600;font-size:14px;color:#a1a1aa;text-transform:uppercase;letter-spacing:0.05em}
+  .blocks{display:flex;flex-direction:column;gap:8px}
+  .block{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;font-size:13px}
+  .block .time{min-width:130px;color:#a1a1aa;font-variant-numeric:tabular-nums}
+  .block .title{flex:1;font-weight:500;color:#e4e4e7}
+  .block .cat{font-size:11px;color:#71717a;background:#27272a;padding:2px 8px;border-radius:6px}
+  .free{color:#3f3f46;font-style:italic;font-size:13px}
+  .footer{text-align:center;margin-top:32px;font-size:11px;color:#3f3f46}
+  @media print{body{background:#fff;color:#18181b}.block{-webkit-print-color-adjust:exact;print-color-adjust:exact}.block .title{color:#18181b}.day{color:#52525b}.block .time{color:#71717a}tr{border-color:#e4e4e7}.footer{display:none}}
+  @media(max-width:600px){.day{width:80px;font-size:12px}.block{flex-wrap:wrap;gap:4px}.block .time{min-width:auto;width:100%}}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="brand">AXIS</div>
+    <h1>${userName}'s Weekly Schedule</h1>
+    <div class="sub">Generated ${new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</div>
+  </div>
+  <table>${dayRows}</table>
+  <div class="footer">Made with AXIS — your life operating system</div>
+</div>
+</body>
+</html>`;
+}
+
+function ScheduleTab() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const [addingDay, setAddingDay] = useState<number | null>(null);
+  const [title, setTitle] = useState("");
+  const [startTime, setStartTime] = useState("09:00");
+  const [endTime, setEndTime] = useState("10:00");
+  const [blockCat, setBlockCat] = useState("School");
+
+  const { data: blocks, isLoading } = useQuery({
+    queryKey: ["schedule_blocks", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("schedule_blocks")
+        .select("*")
+        .order("day_of_week")
+        .order("start_time");
+      if (error) throw error;
+      return data as Block[];
+    },
+  });
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["schedule_blocks"] });
+
+  const addBlock = useMutation({
+    mutationFn: async () => {
+      const cat = BLOCK_CATEGORIES.find((c) => c.name === blockCat) ?? BLOCK_CATEGORIES[6];
+      const { error } = await supabase.from("schedule_blocks").insert({
+        user_id: user!.id,
+        day_of_week: addingDay!,
+        start_time: startTime,
+        end_time: endTime,
+        title: title.trim(),
+        category: cat.name,
+        color: cat.color,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setTitle("");
+      setStartTime("09:00");
+      setEndTime("10:00");
+      setAddingDay(null);
+      invalidate();
+      toast.success("Block added");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const removeBlock = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("schedule_blocks").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidate();
+      toast.success("Block removed");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const downloadSchedule = useCallback(() => {
+    if (!blocks?.length) return;
+    const name = user?.user_metadata?.["full_name"] ?? user?.user_metadata?.["name"] ?? "My";
+    const html = generateScheduleHTML(blocks, name);
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "my-weekly-schedule.html";
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Schedule downloaded");
+  }, [blocks, user]);
+
+  const grouped: Record<number, Block[]> = {};
+  for (const b of blocks ?? []) {
+    (grouped[b.day_of_week] ??= []).push(b);
+  }
+
+  return (
+    <div className="space-y-5">
+      <Card>
+        <CardTitle
+          action={
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={downloadSchedule}
+              disabled={!blocks?.length}
+            >
+              <Download className="h-3.5 w-3.5" /> Download HTML
+            </Button>
+          }
+        >
+          Weekly Schedule
+        </CardTitle>
+
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground">Loading schedule…</p>
+        ) : (
+          <div className="space-y-3">
+            {DAYS.map((dayName, dayIndex) => {
+              const dayBlocks = grouped[dayIndex] ?? [];
+              return (
+                <div key={dayName} className="rounded-xl border border-border p-4">
+                  <div className="mb-2 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-foreground">{dayName}</h3>
+                    <button
+                      onClick={() => setAddingDay(addingDay === dayIndex ? null : dayIndex)}
+                      className="text-xs text-muted-foreground hover:text-primary"
+                    >
+                      <Plus className="inline h-3.5 w-3.5" /> Add block
+                    </button>
+                  </div>
+
+                  {dayBlocks.length === 0 && addingDay !== dayIndex ? (
+                    <p className="text-xs text-muted-foreground italic">No blocks yet</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {dayBlocks.map((b) => (
+                        <div
+                          key={b.id}
+                          className="flex items-center gap-3 rounded-lg p-2.5 text-sm"
+                          style={{
+                            borderLeft: `3px solid ${b.color}`,
+                            background: `${b.color}10`,
+                          }}
+                        >
+                          <Clock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                          <span className="min-w-[110px] text-xs tabular-nums text-muted-foreground">
+                            {fmtTime(b.start_time)} – {fmtTime(b.end_time)}
+                          </span>
+                          <span className="flex-1 font-medium text-foreground">{b.title}</span>
+                          <span className="rounded-md bg-secondary px-2 py-0.5 text-xs text-muted-foreground">
+                            {b.category}
+                          </span>
+                          <button
+                            onClick={() => removeBlock.mutate(b.id)}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {addingDay === dayIndex ? (
+                    <form
+                      className="mt-3 grid grid-cols-2 gap-2 rounded-lg border border-border bg-secondary/30 p-3 sm:grid-cols-5"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        if (!title.trim()) return;
+                        addBlock.mutate();
+                      }}
+                    >
+                      <div className="col-span-2 sm:col-span-1">
+                        <Label htmlFor="block-title">Title</Label>
+                        <Input
+                          id="block-title"
+                          value={title}
+                          onChange={(e) => setTitle(e.target.value)}
+                          placeholder="Math class"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="block-start">Start</Label>
+                        <Input
+                          id="block-start"
+                          type="time"
+                          value={startTime}
+                          onChange={(e) => setStartTime(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="block-end">End</Label>
+                        <Input
+                          id="block-end"
+                          type="time"
+                          value={endTime}
+                          onChange={(e) => setEndTime(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="block-cat">Type</Label>
+                        <Select
+                          id="block-cat"
+                          value={blockCat}
+                          onChange={(e) => setBlockCat(e.target.value)}
+                        >
+                          {BLOCK_CATEGORIES.map((c) => (
+                            <option key={c.name} value={c.name}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
+                      <div className="col-span-2 flex items-end gap-2 sm:col-span-1">
+                        <Button type="submit" size="sm" disabled={addBlock.isPending} className="flex-1">
+                          {addBlock.isPending ? "…" : "Add"}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setAddingDay(null)}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </form>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+      <p className="text-xs text-muted-foreground">
+        Design your weekly routine — school blocks, workouts, study sessions and more.
+        Download as HTML to print or share.
       </p>
     </div>
   );
