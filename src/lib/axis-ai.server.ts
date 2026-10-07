@@ -430,9 +430,9 @@ export async function formatSchedule(opts: {
 }) {
   const { model } = await resolveAccess(opts.supabase, opts.userId, opts.modelId);
 
-  const callModel = () =>
+  const makeCall = (engineId: string) =>
     runModel({
-      model: model.underlying,
+      model: engineId,
       messages: [
         { role: "system", content: SCHEDULE_SYSTEM },
         { role: "user", content: opts.text },
@@ -444,12 +444,16 @@ export async function formatSchedule(opts: {
 
   let raw: string;
   try {
-    raw = await callModel();
+    raw = await makeCall(model.underlying);
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     if (msg.includes("503") || msg.includes("UNAVAILABLE") || msg.includes("overloaded")) {
-      await new Promise((r) => setTimeout(r, 3000));
-      raw = await callModel();
+      await new Promise((r) => setTimeout(r, 2000));
+      try {
+        raw = await makeCall(model.underlying);
+      } catch {
+        raw = await makeCall("google/gemini-2.5-flash");
+      }
     } else {
       throw e;
     }
