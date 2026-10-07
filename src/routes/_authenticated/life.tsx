@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, Clock, Download, Flame, Plus, Star, Trash2 } from "lucide-react";
+import { Check, Clock, Copy, Download, Flame, Plus, Star, Trash2 } from "lucide-react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
@@ -608,6 +608,64 @@ function generateScheduleHTML(blocks: Block[], userName: string) {
 </html>`;
 }
 
+type TemplateBlock = Omit<Block, "id"> & { day_of_week: number };
+
+const SCHEDULE_TEMPLATE: TemplateBlock[] = [
+  // Monday
+  { day_of_week: 0, start_time: "05:30", end_time: "06:00", title: "Study Session", category: "Study", color: "#3b82f6" },
+  { day_of_week: 0, start_time: "06:10", end_time: "07:00", title: "Getting Ready", category: "Personal", color: "#ec4899" },
+  { day_of_week: 0, start_time: "07:00", end_time: "15:00", title: "School", category: "School", color: "#8992a6" },
+  { day_of_week: 0, start_time: "15:30", end_time: "16:30", title: "Homework / Tutor", category: "Study", color: "#3b82f6" },
+  { day_of_week: 0, start_time: "17:00", end_time: "18:30", title: "Sport Practice", category: "Sport", color: "#ff5a36" },
+  { day_of_week: 0, start_time: "19:00", end_time: "19:30", title: "Dinner", category: "Meal", color: "#e8b93b" },
+  { day_of_week: 0, start_time: "21:00", end_time: "21:30", title: "Wind Down + Sleep", category: "Rest", color: "#b084f5" },
+  // Tuesday
+  { day_of_week: 1, start_time: "05:30", end_time: "06:00", title: "Study Session", category: "Study", color: "#3b82f6" },
+  { day_of_week: 1, start_time: "06:10", end_time: "07:00", title: "Getting Ready", category: "Personal", color: "#ec4899" },
+  { day_of_week: 1, start_time: "07:00", end_time: "15:00", title: "School", category: "School", color: "#8992a6" },
+  { day_of_week: 1, start_time: "15:30", end_time: "17:00", title: "Extracurricular", category: "School", color: "#8992a6" },
+  { day_of_week: 1, start_time: "17:30", end_time: "18:30", title: "Gym — Push + Core", category: "Workout", color: "#4caf7d" },
+  { day_of_week: 1, start_time: "19:00", end_time: "19:30", title: "Dinner", category: "Meal", color: "#e8b93b" },
+  { day_of_week: 1, start_time: "21:00", end_time: "21:30", title: "Wind Down + Sleep", category: "Rest", color: "#b084f5" },
+  // Wednesday
+  { day_of_week: 2, start_time: "05:30", end_time: "06:00", title: "Study Session", category: "Study", color: "#3b82f6" },
+  { day_of_week: 2, start_time: "06:10", end_time: "07:00", title: "Getting Ready", category: "Personal", color: "#ec4899" },
+  { day_of_week: 2, start_time: "07:00", end_time: "15:00", title: "School", category: "School", color: "#8992a6" },
+  { day_of_week: 2, start_time: "15:30", end_time: "16:30", title: "Homework / Tutor", category: "Study", color: "#3b82f6" },
+  { day_of_week: 2, start_time: "17:00", end_time: "18:30", title: "Sport Practice", category: "Sport", color: "#ff5a36" },
+  { day_of_week: 2, start_time: "19:00", end_time: "19:30", title: "Dinner", category: "Meal", color: "#e8b93b" },
+  { day_of_week: 2, start_time: "21:00", end_time: "21:30", title: "Wind Down + Sleep", category: "Rest", color: "#b084f5" },
+  // Thursday
+  { day_of_week: 3, start_time: "05:30", end_time: "06:00", title: "Study Session", category: "Study", color: "#3b82f6" },
+  { day_of_week: 3, start_time: "06:10", end_time: "07:00", title: "Getting Ready", category: "Personal", color: "#ec4899" },
+  { day_of_week: 3, start_time: "07:00", end_time: "15:00", title: "School", category: "School", color: "#8992a6" },
+  { day_of_week: 3, start_time: "15:30", end_time: "17:00", title: "Extracurricular", category: "School", color: "#8992a6" },
+  { day_of_week: 3, start_time: "17:30", end_time: "18:30", title: "Gym — Pull + Legs", category: "Workout", color: "#4caf7d" },
+  { day_of_week: 3, start_time: "19:00", end_time: "19:30", title: "Dinner", category: "Meal", color: "#e8b93b" },
+  { day_of_week: 3, start_time: "21:00", end_time: "21:30", title: "Wind Down + Sleep", category: "Rest", color: "#b084f5" },
+  // Friday
+  { day_of_week: 4, start_time: "05:30", end_time: "06:00", title: "Study Session", category: "Study", color: "#3b82f6" },
+  { day_of_week: 4, start_time: "06:10", end_time: "07:00", title: "Getting Ready", category: "Personal", color: "#ec4899" },
+  { day_of_week: 4, start_time: "07:00", end_time: "15:00", title: "School", category: "School", color: "#8992a6" },
+  { day_of_week: 4, start_time: "15:30", end_time: "16:30", title: "Homework / Tutor", category: "Study", color: "#3b82f6" },
+  { day_of_week: 4, start_time: "17:00", end_time: "18:30", title: "Sport Practice", category: "Sport", color: "#ff5a36" },
+  { day_of_week: 4, start_time: "19:00", end_time: "19:30", title: "Dinner", category: "Meal", color: "#e8b93b" },
+  { day_of_week: 4, start_time: "21:00", end_time: "21:30", title: "Wind Down + Sleep", category: "Rest", color: "#b084f5" },
+  // Saturday
+  { day_of_week: 5, start_time: "08:30", end_time: "10:30", title: "Sport / Training", category: "Sport", color: "#ff5a36" },
+  { day_of_week: 5, start_time: "11:00", end_time: "13:00", title: "Class / Tutor", category: "School", color: "#8992a6" },
+  { day_of_week: 5, start_time: "13:00", end_time: "13:30", title: "Lunch", category: "Meal", color: "#e8b93b" },
+  { day_of_week: 5, start_time: "14:00", end_time: "16:00", title: "Free Time", category: "Rest", color: "#b084f5" },
+  { day_of_week: 5, start_time: "19:00", end_time: "19:30", title: "Dinner", category: "Meal", color: "#e8b93b" },
+  // Sunday
+  { day_of_week: 6, start_time: "09:00", end_time: "10:00", title: "Gym — Full Body", category: "Workout", color: "#4caf7d" },
+  { day_of_week: 6, start_time: "11:00", end_time: "13:00", title: "Class / Study", category: "Study", color: "#3b82f6" },
+  { day_of_week: 6, start_time: "13:00", end_time: "13:30", title: "Lunch", category: "Meal", color: "#e8b93b" },
+  { day_of_week: 6, start_time: "14:00", end_time: "17:00", title: "Free Time", category: "Rest", color: "#b084f5" },
+  { day_of_week: 6, start_time: "19:00", end_time: "19:30", title: "Dinner", category: "Meal", color: "#e8b93b" },
+  { day_of_week: 6, start_time: "21:00", end_time: "21:30", title: "Wind Down + Sleep", category: "Rest", color: "#b084f5" },
+];
+
 function ScheduleTab() {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -668,6 +726,27 @@ function ScheduleTab() {
     onSuccess: () => {
       invalidate();
       toast.success("Block removed");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const loadTemplate = useMutation({
+    mutationFn: async () => {
+      const rows = SCHEDULE_TEMPLATE.map((b) => ({
+        user_id: user!.id,
+        day_of_week: b.day_of_week,
+        start_time: b.start_time,
+        end_time: b.end_time,
+        title: b.title,
+        category: b.category,
+        color: b.color,
+      }));
+      const { error } = await supabase.from("schedule_blocks").insert(rows);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidate();
+      toast.success("Template loaded — customize it to fit your week!");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -775,6 +854,28 @@ function ScheduleTab() {
 
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Loading schedule…</p>
+        ) : !blocks?.length && !adding ? (
+          <div className="py-8 text-center">
+            <p className="text-sm font-medium text-foreground">Start with a template</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Load a full weekly schedule template — school, workouts, meals, study and rest — then customize it however you want.
+            </p>
+            <div className="mt-4 flex items-center justify-center gap-3">
+              <Button
+                size="sm"
+                onClick={() => loadTemplate.mutate()}
+                disabled={loadTemplate.isPending}
+              >
+                <Copy className="h-3.5 w-3.5" /> {loadTemplate.isPending ? "Loading…" : "Use Template"}
+              </Button>
+              <button
+                onClick={() => setAdding(true)}
+                className="text-xs text-muted-foreground hover:text-primary"
+              >
+                or start from scratch
+              </button>
+            </div>
+          </div>
         ) : dayBlocks.length === 0 && !adding ? (
           <div className="py-8 text-center">
             <p className="text-sm text-muted-foreground">No blocks yet for {DAYS[activeDay]}.</p>
