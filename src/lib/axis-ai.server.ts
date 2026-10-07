@@ -434,16 +434,30 @@ export async function formatSchedule(opts: {
 }) {
   const { model } = await resolveAccess(opts.supabase, opts.userId, opts.modelId);
 
-  const raw = await runModel({
-    model: model.underlying,
-    messages: [
-      { role: "system", content: SCHEDULE_SYSTEM },
-      { role: "user", content: opts.text },
-    ],
-    jsonSchema: { name: "weekly_schedule", schema: SCHEDULE_SCHEMA as unknown as Record<string, unknown> },
-    userId: opts.userId,
-    supabase: opts.supabase,
-  });
+  const callModel = () =>
+    runModel({
+      model: model.underlying,
+      messages: [
+        { role: "system", content: SCHEDULE_SYSTEM },
+        { role: "user", content: opts.text },
+      ],
+      jsonSchema: { name: "weekly_schedule", schema: SCHEDULE_SCHEMA as unknown as Record<string, unknown> },
+      userId: opts.userId,
+      supabase: opts.supabase,
+    });
+
+  let raw: string;
+  try {
+    raw = await callModel();
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes("503") || msg.includes("UNAVAILABLE") || msg.includes("overloaded")) {
+      await new Promise((r) => setTimeout(r, 3000));
+      raw = await callModel();
+    } else {
+      throw e;
+    }
+  }
 
   const schedule = parseJson<ScheduleData>(raw);
   await logChat(opts.supabase, opts.userId, {
