@@ -369,7 +369,6 @@ export async function schoolPlan(opts: {
 
 const SCHEDULE_SCHEMA = {
   type: "object",
-  additionalProperties: false,
   required: ["name", "days"],
   properties: {
     name: { type: "string" },
@@ -377,7 +376,6 @@ const SCHEDULE_SCHEMA = {
       type: "array",
       items: {
         type: "object",
-        additionalProperties: false,
         required: ["day", "tag", "blocks"],
         properties: {
           day: { type: "string", enum: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] },
@@ -386,7 +384,6 @@ const SCHEDULE_SCHEMA = {
             type: "array",
             items: {
               type: "object",
-              additionalProperties: false,
               required: ["time", "label", "type", "notes"],
               properties: {
                 time: { type: "string" },
