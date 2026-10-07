@@ -457,7 +457,7 @@ export async function formatSchedule(opts: {
     } catch (e: unknown) {
       lastErr = e;
       const msg = e instanceof Error ? e.message : String(e);
-      if (msg.includes("503") || msg.includes("UNAVAILABLE") || msg.includes("overloaded")) {
+      if (msg.includes("503") || msg.includes("UNAVAILABLE") || msg.includes("overloaded") || msg.includes("429") || msg.includes("rate limit") || msg.includes("busy")) {
         await new Promise((r) => setTimeout(r, 1500));
         continue;
       }
