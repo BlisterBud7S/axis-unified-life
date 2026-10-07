@@ -480,13 +480,16 @@ function HabitsTab() {
 }
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
+const SHORT_DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] as const;
 const BLOCK_CATEGORIES = [
-  { name: "School", color: "#6366f1" },
-  { name: "Workout", color: "#22c55e" },
+  { name: "School", color: "#8992a6" },
+  { name: "Workout", color: "#4caf7d" },
+  { name: "Sport", color: "#ff5a36" },
   { name: "Study", color: "#3b82f6" },
   { name: "Work", color: "#f59e0b" },
+  { name: "Meal", color: "#e8b93b" },
   { name: "Personal", color: "#ec4899" },
-  { name: "Rest", color: "#8b5cf6" },
+  { name: "Rest", color: "#b084f5" },
   { name: "Other", color: "#64748b" },
 ] as const;
 
@@ -508,6 +511,17 @@ const fmtTime = (t: string) => {
   return `${h12}:${m} ${ampm}`;
 };
 
+function getDayIntensity(dayBlocks: Block[]): { label: string; color: string } {
+  const cats = new Set(dayBlocks.map((b) => b.category));
+  if (cats.has("Workout") && (cats.has("Sport") || dayBlocks.filter((b) => b.category === "Workout").length > 1))
+    return { label: "Heavy", color: "#ff5a36" };
+  if (cats.has("Workout") || cats.has("Sport"))
+    return { label: "Active", color: "#4caf7d" };
+  if (dayBlocks.length > 0)
+    return { label: "Light", color: "#e8b93b" };
+  return { label: "Rest", color: "#b084f5" };
+}
+
 function generateScheduleHTML(blocks: Block[], userName: string) {
   const grouped: Record<number, Block[]> = {};
   for (const b of blocks) {
@@ -517,22 +531,33 @@ function generateScheduleHTML(blocks: Block[], userName: string) {
     grouped[Number(day)]!.sort((a, b) => a.start_time.localeCompare(b.start_time));
   }
 
-  const dayRows = DAYS.map((dayName, i) => {
+  const legendItems = BLOCK_CATEGORIES.map(
+    (c) => `<span><span class="dot" style="background:${c.color}"></span>${c.name}</span>`,
+  ).join("");
+
+  const daysSections = DAYS.map((dayName, i) => {
     const dayBlocks = grouped[i] ?? [];
+    const intensity = getDayIntensity(dayBlocks);
     if (dayBlocks.length === 0) {
-      return `<tr><td class="day">${dayName}</td><td class="blocks"><span class="free">Free day</span></td></tr>`;
+      return `<div class="day-section">
+        <div class="day-header"><h2 class="day-title">${dayName}</h2><span class="day-tag" style="background:${intensity.color}22;color:${intensity.color}">${intensity.label}</span></div>
+        <div class="timeline"><div class="block type-rest"><div class="dot-marker" style="background:${BLOCK_CATEGORIES[7].color}"></div><div class="block-content"><span class="block-label">Free day</span></div></div></div>
+      </div>`;
     }
     const items = dayBlocks
       .map(
         (b) =>
-          `<div class="block" style="border-left:4px solid ${b.color};background:${b.color}12">
+          `<div class="block"><div class="dot-marker" style="background:${b.color}"></div><div class="block-content">
             <span class="time">${fmtTime(b.start_time)} – ${fmtTime(b.end_time)}</span>
-            <span class="title">${b.title}</span>
+            <span class="block-label">${b.title}</span>
             <span class="cat">${b.category}</span>
-          </div>`,
+          </div></div>`,
       )
       .join("");
-    return `<tr><td class="day">${dayName}</td><td class="blocks">${items}</td></tr>`;
+    return `<div class="day-section">
+      <div class="day-header"><h2 class="day-title">${dayName}</h2><span class="day-tag" style="background:${intensity.color}22;color:${intensity.color}">${intensity.label}</span></div>
+      <div class="timeline">${items}</div>
+    </div>`;
   }).join("");
 
   return `<!DOCTYPE html>
@@ -543,25 +568,29 @@ function generateScheduleHTML(blocks: Block[], userName: string) {
 <title>${userName}'s Weekly Schedule — AXIS</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0a0a0f;color:#e4e4e7;padding:32px 24px;min-height:100vh}
-  .container{max-width:900px;margin:0 auto}
-  .header{text-align:center;margin-bottom:32px}
-  .header .brand{font-size:11px;letter-spacing:0.3em;text-transform:uppercase;color:#818cf8;margin-bottom:8px}
-  .header h1{font-size:28px;font-weight:600}
-  .header .sub{font-size:13px;color:#71717a;margin-top:4px}
-  table{width:100%;border-collapse:collapse}
-  tr{border-bottom:1px solid #27272a}
-  td{padding:16px 12px;vertical-align:top}
-  .day{width:120px;font-weight:600;font-size:14px;color:#a1a1aa;text-transform:uppercase;letter-spacing:0.05em}
-  .blocks{display:flex;flex-direction:column;gap:8px}
-  .block{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;font-size:13px}
-  .block .time{min-width:130px;color:#a1a1aa;font-variant-numeric:tabular-nums}
-  .block .title{flex:1;font-weight:500;color:#e4e4e7}
-  .block .cat{font-size:11px;color:#71717a;background:#27272a;padding:2px 8px;border-radius:6px}
-  .free{color:#3f3f46;font-style:italic;font-size:13px}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#10131a;color:#edeff3;padding:32px 24px;min-height:100vh}
+  .container{max-width:700px;margin:0 auto}
+  .header{text-align:center;margin-bottom:28px}
+  .header .brand{font-size:11px;letter-spacing:0.3em;text-transform:uppercase;color:#818cf8;margin-bottom:6px}
+  .header h1{font-size:28px;font-weight:700;text-transform:uppercase;letter-spacing:0.01em}
+  .header .sub{font-size:13px;color:#8992a6;margin-top:4px}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:#8992a6;margin-bottom:24px;justify-content:center}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .dot{width:9px;height:9px;border-radius:2px;display:inline-block}
+  .day-section{margin-bottom:28px}
+  .day-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .day-title{font-size:20px;font-weight:700;text-transform:uppercase;letter-spacing:0.02em}
+  .day-tag{display:inline-block;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;padding:3px 10px;border-radius:20px;font-weight:500}
+  .timeline{position:relative;padding-left:20px;border-left:2px solid #2c3240}
+  .block{position:relative;margin-bottom:10px;background:#1a1e27;border:1px solid #2c3240;border-radius:10px;padding:12px 14px;display:flex;align-items:flex-start;gap:12px}
+  .dot-marker{position:absolute;left:-27px;top:16px;width:10px;height:10px;border-radius:50%;border:2px solid #10131a}
+  .block-content{display:flex;flex-direction:column;gap:2px;flex:1}
+  .time{font-size:11px;color:#8992a6;font-variant-numeric:tabular-nums;font-family:ui-monospace,monospace}
+  .block-label{font-size:15px;font-weight:600}
+  .cat{font-size:10px;color:#8992a6;text-transform:uppercase;letter-spacing:0.06em}
   .footer{text-align:center;margin-top:32px;font-size:11px;color:#3f3f46}
-  @media print{body{background:#fff;color:#18181b}.block{-webkit-print-color-adjust:exact;print-color-adjust:exact}.block .title{color:#18181b}.day{color:#52525b}.block .time{color:#71717a}tr{border-color:#e4e4e7}.footer{display:none}}
-  @media(max-width:600px){.day{width:80px;font-size:12px}.block{flex-wrap:wrap;gap:4px}.block .time{min-width:auto;width:100%}}
+  @media print{body{background:#fff;color:#18181b;-webkit-print-color-adjust:exact;print-color-adjust:exact}.block{background:#f8f9fa;border-color:#e4e4e7}.block-label{color:#18181b}.day-title{color:#18181b}.time{color:#71717a}.timeline{border-color:#d4d4d8}.dot-marker{border-color:#fff}.footer{display:none}}
+  @media(max-width:500px){.day-title{font-size:16px}.block-label{font-size:13px}.block{padding:10px 12px}}
 </style>
 </head>
 <body>
@@ -571,7 +600,8 @@ function generateScheduleHTML(blocks: Block[], userName: string) {
     <h1>${userName}'s Weekly Schedule</h1>
     <div class="sub">Generated ${new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</div>
   </div>
-  <table>${dayRows}</table>
+  <div class="legend">${legendItems}</div>
+  ${daysSections}
   <div class="footer">Made with AXIS — your life operating system</div>
 </div>
 </body>
@@ -581,7 +611,9 @@ function generateScheduleHTML(blocks: Block[], userName: string) {
 function ScheduleTab() {
   const { user } = useAuth();
   const qc = useQueryClient();
-  const [addingDay, setAddingDay] = useState<number | null>(null);
+  const todayIndex = (new Date().getDay() + 6) % 7;
+  const [activeDay, setActiveDay] = useState(todayIndex);
+  const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState("");
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("10:00");
@@ -605,10 +637,10 @@ function ScheduleTab() {
 
   const addBlock = useMutation({
     mutationFn: async () => {
-      const cat = BLOCK_CATEGORIES.find((c) => c.name === blockCat) ?? BLOCK_CATEGORIES[6];
+      const cat = BLOCK_CATEGORIES.find((c) => c.name === blockCat) ?? BLOCK_CATEGORIES[8];
       const { error } = await supabase.from("schedule_blocks").insert({
         user_id: user!.id,
-        day_of_week: addingDay!,
+        day_of_week: activeDay,
         start_time: startTime,
         end_time: endTime,
         title: title.trim(),
@@ -621,7 +653,7 @@ function ScheduleTab() {
       setTitle("");
       setStartTime("09:00");
       setEndTime("10:00");
-      setAddingDay(null);
+      setAdding(false);
       invalidate();
       toast.success("Block added");
     },
@@ -659,151 +691,210 @@ function ScheduleTab() {
     (grouped[b.day_of_week] ??= []).push(b);
   }
 
+  const dayBlocks = grouped[activeDay] ?? [];
+  const intensity = getDayIntensity(dayBlocks);
+
   return (
     <div className="space-y-5">
+      {/* Legend */}
+      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+        {BLOCK_CATEGORIES.map((c) => (
+          <span key={c.name} className="flex items-center gap-1.5">
+            <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: c.color }} />
+            {c.name}
+          </span>
+        ))}
+      </div>
+
+      {/* Day tabs */}
+      <div className="grid grid-cols-7 gap-1.5">
+        {SHORT_DAYS.map((short, i) => {
+          const dayIntensity = getDayIntensity(grouped[i] ?? []);
+          return (
+            <button
+              key={short}
+              onClick={() => { setActiveDay(i); setAdding(false); }}
+              className={cn(
+                "flex flex-col items-center gap-1.5 rounded-xl border p-2.5 text-center transition-all",
+                activeDay === i
+                  ? "border-primary bg-secondary/60"
+                  : "border-border hover:border-primary/40",
+              )}
+            >
+              <span
+                className={cn(
+                  "text-xs font-semibold tracking-wide",
+                  activeDay === i ? "text-primary" : "text-foreground",
+                )}
+              >
+                {short}
+              </span>
+              <span
+                className="h-1 w-full rounded-full"
+                style={{ background: dayIntensity.color }}
+              />
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Active day view */}
       <Card>
-        <CardTitle
-          action={
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-bold tracking-wide text-foreground uppercase">
+              {DAYS[activeDay]}
+            </h2>
+            <span
+              className="rounded-full px-2.5 py-0.5 text-[10px] font-medium tracking-wider uppercase"
+              style={{
+                background: `${intensity.color}22`,
+                color: intensity.color,
+              }}
+            >
+              {intensity.label}
+            </span>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setAdding(!adding)}
+              className="text-xs text-muted-foreground hover:text-primary"
+            >
+              <Plus className="inline h-3.5 w-3.5" /> Add block
+            </button>
             <Button
               variant="outline"
               size="sm"
               onClick={downloadSchedule}
               disabled={!blocks?.length}
             >
-              <Download className="h-3.5 w-3.5" /> Download HTML
+              <Download className="h-3.5 w-3.5" /> Download
             </Button>
-          }
-        >
-          Weekly Schedule
-        </CardTitle>
+          </div>
+        </div>
 
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Loading schedule…</p>
+        ) : dayBlocks.length === 0 && !adding ? (
+          <div className="py-8 text-center">
+            <p className="text-sm text-muted-foreground">No blocks yet for {DAYS[activeDay]}.</p>
+            <button
+              onClick={() => setAdding(true)}
+              className="mt-2 text-xs text-primary hover:underline"
+            >
+              Add your first block
+            </button>
+          </div>
         ) : (
-          <div className="space-y-3">
-            {DAYS.map((dayName, dayIndex) => {
-              const dayBlocks = grouped[dayIndex] ?? [];
-              return (
-                <div key={dayName} className="rounded-xl border border-border p-4">
-                  <div className="mb-2 flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-foreground">{dayName}</h3>
+          /* Timeline */
+          <div className="relative ml-3 border-l-2 border-border pl-5">
+            {dayBlocks.map((b) => (
+              <div key={b.id} className="group relative mb-3">
+                {/* Dot on timeline */}
+                <span
+                  className="absolute -left-[27px] top-4 h-2.5 w-2.5 rounded-full border-2 border-background"
+                  style={{ background: b.color }}
+                />
+                <div
+                  className="rounded-xl border border-border p-3 transition-colors"
+                  style={{ borderLeftColor: b.color, borderLeftWidth: 3 }}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+                        {fmtTime(b.start_time)} – {fmtTime(b.end_time)}
+                      </span>
+                      <span className="text-sm font-semibold text-foreground">{b.title}</span>
+                      <span className="text-[10px] tracking-wider text-muted-foreground uppercase">
+                        {b.category}
+                      </span>
+                    </div>
                     <button
-                      onClick={() => setAddingDay(addingDay === dayIndex ? null : dayIndex)}
-                      className="text-xs text-muted-foreground hover:text-primary"
+                      onClick={() => removeBlock.mutate(b.id)}
+                      className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
                     >
-                      <Plus className="inline h-3.5 w-3.5" /> Add block
+                      <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
-
-                  {dayBlocks.length === 0 && addingDay !== dayIndex ? (
-                    <p className="text-xs text-muted-foreground italic">No blocks yet</p>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {dayBlocks.map((b) => (
-                        <div
-                          key={b.id}
-                          className="flex items-center gap-3 rounded-lg p-2.5 text-sm"
-                          style={{
-                            borderLeft: `3px solid ${b.color}`,
-                            background: `${b.color}10`,
-                          }}
-                        >
-                          <Clock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                          <span className="min-w-[110px] text-xs tabular-nums text-muted-foreground">
-                            {fmtTime(b.start_time)} – {fmtTime(b.end_time)}
-                          </span>
-                          <span className="flex-1 font-medium text-foreground">{b.title}</span>
-                          <span className="rounded-md bg-secondary px-2 py-0.5 text-xs text-muted-foreground">
-                            {b.category}
-                          </span>
-                          <button
-                            onClick={() => removeBlock.mutate(b.id)}
-                            className="text-muted-foreground hover:text-destructive"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {addingDay === dayIndex ? (
-                    <form
-                      className="mt-3 grid grid-cols-2 gap-2 rounded-lg border border-border bg-secondary/30 p-3 sm:grid-cols-5"
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        if (!title.trim()) return;
-                        addBlock.mutate();
-                      }}
-                    >
-                      <div className="col-span-2 sm:col-span-1">
-                        <Label htmlFor="block-title">Title</Label>
-                        <Input
-                          id="block-title"
-                          value={title}
-                          onChange={(e) => setTitle(e.target.value)}
-                          placeholder="Math class"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="block-start">Start</Label>
-                        <Input
-                          id="block-start"
-                          type="time"
-                          value={startTime}
-                          onChange={(e) => setStartTime(e.target.value)}
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="block-end">End</Label>
-                        <Input
-                          id="block-end"
-                          type="time"
-                          value={endTime}
-                          onChange={(e) => setEndTime(e.target.value)}
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="block-cat">Type</Label>
-                        <Select
-                          id="block-cat"
-                          value={blockCat}
-                          onChange={(e) => setBlockCat(e.target.value)}
-                        >
-                          {BLOCK_CATEGORIES.map((c) => (
-                            <option key={c.name} value={c.name}>
-                              {c.name}
-                            </option>
-                          ))}
-                        </Select>
-                      </div>
-                      <div className="col-span-2 flex items-end gap-2 sm:col-span-1">
-                        <Button type="submit" size="sm" disabled={addBlock.isPending} className="flex-1">
-                          {addBlock.isPending ? "…" : "Add"}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setAddingDay(null)}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </form>
-                  ) : null}
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         )}
+
+        {/* Add block form */}
+        {adding ? (
+          <form
+            className="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-border bg-secondary/30 p-3 sm:grid-cols-5"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!title.trim()) return;
+              addBlock.mutate();
+            }}
+          >
+            <div className="col-span-2 sm:col-span-1">
+              <Label htmlFor="block-title">Title</Label>
+              <Input
+                id="block-title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Math class"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="block-start">Start</Label>
+              <Input
+                id="block-start"
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="block-end">End</Label>
+              <Input
+                id="block-end"
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="block-cat">Type</Label>
+              <Select
+                id="block-cat"
+                value={blockCat}
+                onChange={(e) => setBlockCat(e.target.value)}
+              >
+                {BLOCK_CATEGORIES.map((c) => (
+                  <option key={c.name} value={c.name}>
+                    {c.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="col-span-2 flex items-end gap-2 sm:col-span-1">
+              <Button type="submit" size="sm" disabled={addBlock.isPending} className="flex-1">
+                {addBlock.isPending ? "…" : "Add"}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setAdding(false)}
+              >
+                Cancel
+              </Button>
+            </div>
+          </form>
+        ) : null}
       </Card>
       <p className="text-xs text-muted-foreground">
         Design your weekly routine — school blocks, workouts, study sessions and more.
-        Download as HTML to print or share.
+        Tap a day to view it. Download as a styled HTML file to print or share.
       </p>
     </div>
   );
