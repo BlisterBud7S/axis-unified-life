@@ -98,6 +98,24 @@ export const generateSchoolPlan = createServerFn({ method: "POST" })
     });
   });
 
+const ScheduleInput = z.object({
+  text: z.string().min(10).max(10000),
+  modelId: z.string().min(1),
+});
+
+export const axisFormatSchedule = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => ScheduleInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const { formatSchedule } = await import("@/lib/axis-ai.server");
+    return formatSchedule({
+      supabase: context.supabase,
+      userId: context.userId,
+      modelId: data.modelId,
+      text: data.text,
+    });
+  });
+
 export const axisDocument = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => DocInput.parse(input))

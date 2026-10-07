@@ -5,10 +5,11 @@ import { Input, Label, Select, Textarea } from "@/components/axis/Field";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import { axisFormatSchedule } from "@/lib/ai.functions";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, Flame, Plus, Star, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Check, Copy, Download, Flame, Loader2, Plus, Sparkles, Star, Trash2 } from "lucide-react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/life")({
@@ -35,7 +36,7 @@ const HABITS = ["Workout", "Read", "Sleep 7h+", "No junk food", "Study", "Medita
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
-type Tab = "tasks" | "habits";
+type Tab = "tasks" | "habits" | "schedule";
 
 function LifePage() {
   const [tab, setTab] = useState<Tab>("tasks");
@@ -47,7 +48,7 @@ function LifePage() {
         subtitle="Tasks, priorities and the habits that hold the week together"
         action={
           <div className="flex gap-1 rounded-xl border border-border p-1">
-            {(["tasks", "habits"] as Tab[]).map((t) => (
+            {(["tasks", "habits", "schedule"] as Tab[]).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -64,7 +65,7 @@ function LifePage() {
           </div>
         }
       />
-      {tab === "tasks" ? <TasksTab /> : <HabitsTab />}
+      {tab === "tasks" ? <TasksTab /> : tab === "habits" ? <HabitsTab /> : <ScheduleTab />}
     </>
   );
 }
@@ -474,6 +475,378 @@ function HabitsTab() {
       </Card>
       <p className="text-xs text-muted-foreground">
         Streaks count consecutive days up to today across the last 30 days.
+      </p>
+    </div>
+  );
+}
+
+const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
+const SHORT_DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] as const;
+
+const TYPE_COLORS = {
+  school: "#8992a6",
+  sport: "#ff5a36",
+  workout: "#4caf7d",
+  study: "#3b82f6",
+  work: "#f59e0b",
+  meal: "#e8b93b",
+  personal: "#ec4899",
+  rest: "#b084f5",
+  other: "#64748b",
+} as const;
+
+function typeColor(type: string): string {
+  return (TYPE_COLORS as Record<string, string>)[type] ?? TYPE_COLORS.other;
+}
+
+type ScheduleDay = {
+  day: string;
+  tag: string;
+  blocks: Array<{ time: string; label: string; type: string; notes: string }>;
+};
+
+type ScheduleResult = { name: string; days: ScheduleDay[] };
+
+const EXAMPLE_TEXT = `School Monday to Friday 7:30am to 3pm
+Basketball practice Mon Wed Fri 4-6pm
+Gym Tuesday and Thursday 4:30-5:30pm (push day Tue, pull day Thu)
+Dinner every day around 7pm
+Study/homework after dinner for an hour
+Wake up 6am, sleep by 10pm
+Saturday morning basketball game, rest in afternoon
+Sunday is rest day, maybe light jog in the morning`;
+
+function generateScheduleHTML(schedule: ScheduleResult, userName: string) {
+  const legendTypes = Object.entries(TYPE_COLORS);
+  const legendItems = legendTypes
+    .map(([name, color]) => `<span><span class="dot" style="background:${color}"></span>${name}</span>`)
+    .join("");
+
+  const daysSections = schedule.days
+    .map((day) => {
+      const items = day.blocks
+        .map((b) => {
+          const color = typeColor(b.type);
+          return `<div class="block"><div class="dot-marker" style="background:${color}"></div><div class="block-content">
+            <span class="time">${escHtml(b.time)}</span>
+            <span class="block-label">${escHtml(b.label)}</span>
+            ${b.notes ? `<span class="notes">${escHtml(b.notes)}</span>` : ""}
+            <span class="cat">${escHtml(b.type)}</span>
+          </div></div>`;
+        })
+        .join("");
+
+      const tagColor = typeColor(day.blocks[0]?.type ?? "rest");
+      return `<div class="day-section">
+        <div class="day-header"><h2 class="day-title">${escHtml(day.day)}</h2><span class="day-tag" style="background:${tagColor}22;color:${tagColor}">${escHtml(day.tag)}</span></div>
+        <div class="timeline">${items || '<div class="block"><div class="dot-marker" style="background:#b084f5"></div><div class="block-content"><span class="block-label">Rest Day</span></div></div>'}</div>
+      </div>`;
+    })
+    .join("");
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${escHtml(userName)}'s Weekly Schedule — AXIS</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Inter',sans-serif;background:#10131a;color:#edeff3;padding:32px 24px;min-height:100vh}
+  .container{max-width:700px;margin:0 auto}
+  .header{text-align:center;margin-bottom:28px}
+  .header .brand{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.3em;text-transform:uppercase;color:#818cf8;margin-bottom:6px}
+  .header h1{font-family:'Oswald',sans-serif;font-size:28px;font-weight:700;text-transform:uppercase;letter-spacing:0.01em}
+  .header .sub{font-size:13px;color:#8992a6;margin-top:4px}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:#8992a6;margin-bottom:24px;justify-content:center;font-family:'Space Mono',monospace}
+  .legend span{display:flex;align-items:center;gap:5px;text-transform:capitalize}
+  .dot{width:9px;height:9px;border-radius:2px;display:inline-block}
+  .day-section{margin-bottom:28px}
+  .day-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .day-title{font-family:'Oswald',sans-serif;font-size:20px;font-weight:700;text-transform:uppercase;letter-spacing:0.02em}
+  .day-tag{display:inline-block;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;padding:3px 10px;border-radius:20px;font-weight:500}
+  .timeline{position:relative;padding-left:20px;border-left:2px solid #2c3240}
+  .block{position:relative;margin-bottom:10px;background:#1a1e27;border:1px solid #2c3240;border-radius:10px;padding:12px 14px;display:flex;align-items:flex-start;gap:12px}
+  .dot-marker{position:absolute;left:-27px;top:16px;width:10px;height:10px;border-radius:50%;border:2px solid #10131a}
+  .block-content{display:flex;flex-direction:column;gap:2px;flex:1}
+  .time{font-size:11px;color:#8992a6;font-variant-numeric:tabular-nums;font-family:'Space Mono',monospace}
+  .block-label{font-size:15px;font-weight:600}
+  .notes{font-size:12px;color:#8992a6;font-style:italic}
+  .cat{font-size:10px;color:#8992a6;text-transform:uppercase;letter-spacing:0.06em}
+  .tabs{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:22px}
+  .tab{background:#1a1e27;border:1px solid #2c3240;border-radius:8px;padding:10px 2px 8px;text-align:center;cursor:pointer;transition:transform .12s ease,border-color .12s ease}
+  .tab:hover{transform:translateY(-2px)}
+  .tab .day-label{font-family:'Oswald',sans-serif;font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#edeff3}
+  .tab.active{border-color:#818cf8}
+  .tab .belt{height:3px;border-radius:2px;margin:6px 4px 0}
+  .footer{text-align:center;margin-top:32px;font-size:11px;color:#3f3f46}
+  @media print{body{background:#fff;color:#18181b;-webkit-print-color-adjust:exact;print-color-adjust:exact}.block{background:#f8f9fa;border-color:#e4e4e7}.block-label{color:#18181b}.day-title{color:#18181b}.time{color:#71717a}.timeline{border-color:#d4d4d8}.dot-marker{border-color:#fff}.footer{display:none}}
+  @media(max-width:500px){.day-title{font-size:16px}.block-label{font-size:13px}.block{padding:10px 12px}}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+  const tabs=document.querySelectorAll('.tab');
+  const secs=document.querySelectorAll('.day-section');
+  const dayNames=['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+  const today=dayNames[((new Date).getDay()+6)%7];
+  function show(d){tabs.forEach(t=>{t.classList.toggle('active',t.dataset.day===d)});secs.forEach(s=>{s.style.display=s.dataset.day===d?'':'none'})}
+  tabs.forEach(t=>t.addEventListener('click',()=>show(t.dataset.day)));
+  show(today);
+});
+</script>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="brand">AXIS</div>
+    <h1>${escHtml(userName)}'s ${escHtml(schedule.name)}</h1>
+    <div class="sub">Generated ${new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</div>
+  </div>
+  <div class="legend">${legendItems}</div>
+  <div class="tabs">${schedule.days.map((d) => {
+    const c = typeColor(d.blocks[0]?.type ?? "rest");
+    return `<div class="tab" data-day="${escHtml(d.day.toLowerCase())}"><div class="day-label">${escHtml(d.day.slice(0, 3))}</div><div class="belt" style="background:${c}"></div></div>`;
+  }).join("")}</div>
+  ${schedule.days.map((d) => {
+    const items = d.blocks.map((b) => {
+      const color = typeColor(b.type);
+      return `<div class="block"><div class="dot-marker" style="background:${color}"></div><div class="block-content">
+        <span class="time">${escHtml(b.time)}</span>
+        <span class="block-label">${escHtml(b.label)}</span>
+        ${b.notes ? `<span class="notes">${escHtml(b.notes)}</span>` : ""}
+        <span class="cat">${escHtml(b.type)}</span>
+      </div></div>`;
+    }).join("");
+    const tagColor = typeColor(d.blocks[0]?.type ?? "rest");
+    return `<div class="day-section" data-day="${escHtml(d.day.toLowerCase())}">
+      <div class="day-header"><h2 class="day-title">${escHtml(d.day)}</h2><span class="day-tag" style="background:${tagColor}22;color:${tagColor}">${escHtml(d.tag)}</span></div>
+      <div class="timeline">${items || '<div class="block"><div class="dot-marker" style="background:#b084f5"></div><div class="block-content"><span class="block-label">Rest Day</span></div></div>'}</div>
+    </div>`;
+  }).join("")}
+  <div class="footer">Made with AXIS — your life operating system</div>
+</div>
+</body>
+</html>`;
+}
+
+function escHtml(s: string) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function ScheduleTab() {
+  const { user } = useAuth();
+  const [text, setText] = useState("");
+  const [schedule, setSchedule] = useState<ScheduleResult | null>(null);
+  const todayIndex = (new Date().getDay() + 6) % 7;
+  const [activeDay, setActiveDay] = useState(todayIndex);
+
+  const generate = useMutation({
+    mutationFn: async () => {
+      const result = await axisFormatSchedule({
+        data: { text, modelId: "axis-swift" },
+      });
+      return result as ScheduleResult;
+    },
+    onSuccess: (data) => {
+      setSchedule(data);
+      toast.success("Schedule generated!");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const downloadSchedule = useCallback(() => {
+    if (!schedule) return;
+    const name = user?.user_metadata?.["full_name"] ?? user?.user_metadata?.["name"] ?? "My";
+    const html = generateScheduleHTML(schedule, String(name));
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "my-weekly-schedule.html";
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Schedule downloaded");
+  }, [schedule, user]);
+
+  const activeDayData = schedule?.days[activeDay];
+
+  return (
+    <div className="space-y-5">
+      {/* Input section */}
+      <Card>
+        <CardTitle
+          action={
+            schedule ? (
+              <button
+                onClick={() => setSchedule(null)}
+                className="text-xs text-muted-foreground hover:text-primary"
+              >
+                Edit text
+              </button>
+            ) : null
+          }
+        >
+          {schedule ? schedule.name : "Describe your schedule"}
+        </CardTitle>
+
+        {!schedule ? (
+          <form
+            className="space-y-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (text.trim().length < 10) return;
+              generate.mutate();
+            }}
+          >
+            <Textarea
+              rows={8}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder={EXAMPLE_TEXT}
+              className="font-mono text-sm"
+            />
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs text-muted-foreground">
+                Just describe your week in plain words — AI will format it into a beautiful schedule.
+              </p>
+              <Button
+                type="submit"
+                disabled={generate.isPending || text.trim().length < 10}
+                className="shrink-0"
+              >
+                {generate.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Formatting…
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" /> Generate
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <>
+            {/* Legend */}
+            <div className="mb-4 flex flex-wrap gap-3 text-xs text-muted-foreground">
+              {Object.entries(TYPE_COLORS).map(([name, color]) => (
+                <span key={name} className="flex items-center gap-1.5 capitalize">
+                  <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: color }} />
+                  {name}
+                </span>
+              ))}
+            </div>
+
+            {/* Day tabs */}
+            <div className="mb-4 grid grid-cols-7 gap-1.5">
+              {schedule.days.map((d, i) => {
+                const beltColor = typeColor(d.blocks[0]?.type ?? "rest");
+                return (
+                  <button
+                    key={d.day}
+                    onClick={() => setActiveDay(i)}
+                    className={cn(
+                      "flex flex-col items-center gap-1.5 rounded-xl border p-2.5 text-center transition-all",
+                      activeDay === i
+                        ? "border-primary bg-secondary/60"
+                        : "border-border hover:border-primary/40",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "text-xs font-semibold tracking-wide uppercase",
+                        activeDay === i ? "text-primary" : "text-foreground",
+                      )}
+                    >
+                      {d.day.slice(0, 3)}
+                    </span>
+                    <span
+                      className="h-1 w-full rounded-full"
+                      style={{ background: beltColor }}
+                    />
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Active day view */}
+            {activeDayData ? (
+              <div>
+                <div className="mb-3 flex items-center gap-3">
+                  <h2 className="text-lg font-bold tracking-wide text-foreground uppercase">
+                    {activeDayData.day}
+                  </h2>
+                  <span
+                    className="rounded-full px-2.5 py-0.5 text-[10px] font-medium tracking-wider uppercase"
+                    style={{
+                      background: `${typeColor(activeDayData.blocks[0]?.type ?? "rest")}22`,
+                      color: typeColor(activeDayData.blocks[0]?.type ?? "rest"),
+                    }}
+                  >
+                    {activeDayData.tag}
+                  </span>
+                </div>
+
+                {/* Timeline */}
+                <div className="relative ml-3 border-l-2 border-border pl-5">
+                  {activeDayData.blocks.map((b, bi) => {
+                    const color = typeColor(b.type);
+                    return (
+                      <div key={bi} className="relative mb-3">
+                        <span
+                          className="absolute -left-[27px] top-4 h-2.5 w-2.5 rounded-full border-2 border-background"
+                          style={{ background: color }}
+                        />
+                        <div
+                          className="rounded-xl border border-border p-3"
+                          style={{ borderLeftColor: color, borderLeftWidth: 3 }}
+                        >
+                          <div className="flex flex-col gap-0.5">
+                            <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+                              {b.time}
+                            </span>
+                            <span className="text-sm font-semibold text-foreground">{b.label}</span>
+                            {b.notes ? (
+                              <span className="text-xs italic text-muted-foreground">{b.notes}</span>
+                            ) : null}
+                            <span className="text-[10px] tracking-wider text-muted-foreground uppercase">
+                              {b.type}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+
+            {/* Actions */}
+            <div className="mt-4 flex gap-2">
+              <Button variant="outline" size="sm" onClick={downloadSchedule}>
+                <Download className="h-3.5 w-3.5" /> Download HTML
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  if (!schedule) return;
+                  const name = user?.user_metadata?.["full_name"] ?? user?.user_metadata?.["name"] ?? "My";
+                  const html = generateScheduleHTML(schedule, String(name));
+                  navigator.clipboard.writeText(html);
+                  toast.success("HTML copied to clipboard");
+                }}
+              >
+                <Copy className="h-3.5 w-3.5" /> Copy HTML
+              </Button>
+            </div>
+          </>
+        )}
+      </Card>
+      <p className="text-xs text-muted-foreground">
+        Describe your weekly routine in plain words — AI turns it into a beautiful visual schedule you can download and print.
       </p>
     </div>
   );

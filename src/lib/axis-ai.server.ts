@@ -363,6 +363,98 @@ export async function schoolPlan(opts: {
   return { plan, addedItems: fresh.length };
 }
 
+const SCHEDULE_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["name", "days"],
+  properties: {
+    name: { type: "string" },
+    days: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["day", "tag", "blocks"],
+        properties: {
+          day: { type: "string", enum: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] },
+          tag: { type: "string" },
+          blocks: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              required: ["time", "label", "type", "notes"],
+              properties: {
+                time: { type: "string" },
+                label: { type: "string" },
+                type: { type: "string", enum: ["school", "sport", "workout", "meal", "rest", "study", "work", "personal", "other"] },
+                notes: { type: "string" },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+} as const;
+
+export type ScheduleData = {
+  name: string;
+  days: Array<{
+    day: string;
+    tag: string;
+    blocks: Array<{
+      time: string;
+      label: string;
+      type: string;
+      notes: string;
+    }>;
+  }>;
+};
+
+const SCHEDULE_SYSTEM = `You are a schedule designer. The user will describe their weekly routine in plain words. Parse it into a structured weekly schedule.
+
+Rules:
+- Extract every activity mentioned with realistic time slots (use "HH:MM – HH:MM" 12h format like "6:00 AM – 7:00 AM").
+- Assign each block a type: school, sport, workout, meal, rest, study, work, personal, or other.
+- Give each day a short tag describing its character (e.g. "Heavy Training", "School Focus", "Rest Day", "Game Day").
+- Fill in reasonable gaps — if the user mentions "I eat dinner around 7" give it a 30-min slot.
+- If the user describes a general pattern (like "school Mon-Fri 8-3"), apply it to all relevant days.
+- Include all 7 days. If a day isn't mentioned, infer a reasonable routine or mark it as a rest day.
+- The "name" field should be a short title for the schedule (e.g. "Weekly Routine", "Training Schedule").
+- notes can include detail like workout exercises, what meal, room numbers, etc. Use empty string if none.
+- Be generous with detail in notes when the user provides specifics.`;
+
+export async function formatSchedule(opts: {
+  supabase: Client;
+  userId: string;
+  modelId: string;
+  text: string;
+}) {
+  const { model } = await resolveAccess(opts.supabase, opts.userId, opts.modelId);
+
+  const raw = await runModel({
+    model: model.underlying,
+    messages: [
+      { role: "system", content: SCHEDULE_SYSTEM },
+      { role: "user", content: opts.text },
+    ],
+    jsonSchema: { name: "weekly_schedule", schema: SCHEDULE_SCHEMA as unknown as Record<string, unknown> },
+    userId: opts.userId,
+    supabase: opts.supabase,
+  });
+
+  const schedule = parseJson<ScheduleData>(raw);
+  await logChat(opts.supabase, opts.userId, {
+    model: model.id,
+    prompt: `[schedule] ${opts.text.slice(0, 200)}`,
+    response: raw,
+    contextEnabled: false,
+    source: "schedule",
+  });
+  return schedule;
+}
+
 const DOC_SCHEMA = {
   type: "object",
   required: ["title", "subtitle", "summary", "sections", "footer"],
