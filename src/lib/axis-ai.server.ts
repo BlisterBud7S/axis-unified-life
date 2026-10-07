@@ -460,19 +460,24 @@ export async function formatSchedule(opts: {
       supabase: opts.supabase,
     });
 
-  const fallbacks = [model.underlying, "google/gemini-3.8-flash", "google/gemini-2.0-flash"];
+  const primary = model.underlying === "google/gemini-3.6-flash" ? "google/gemini-3.8-flash" : model.underlying;
+  const fallbacks = [primary, "google/gemini-3.6-flash", "google/gemini-3.5-flash-lite"];
+  const delays = [3000, 5000, 0];
 
   let raw: string | undefined;
   let lastErr: unknown;
-  for (const engine of fallbacks) {
+  for (let i = 0; i < fallbacks.length; i++) {
     try {
-      raw = await makeCall(engine);
+      raw = await makeCall(fallbacks[i]);
       break;
     } catch (e: unknown) {
       lastErr = e;
       const msg = e instanceof Error ? e.message : String(e);
-      if (msg.includes("503") || msg.includes("UNAVAILABLE") || msg.includes("overloaded") || msg.includes("429") || msg.includes("rate limit") || msg.includes("busy") || msg.includes("404") || msg.includes("NOT_FOUND") || msg.includes("no longer available")) {
-        await new Promise((r) => setTimeout(r, 1500));
+      const retryable = msg.includes("503") || msg.includes("UNAVAILABLE") || msg.includes("overloaded")
+        || msg.includes("429") || msg.includes("rate limit") || msg.includes("busy")
+        || msg.includes("404") || msg.includes("NOT_FOUND") || msg.includes("no longer available");
+      if (retryable && i < fallbacks.length - 1) {
+        await new Promise((r) => setTimeout(r, delays[i]));
         continue;
       }
       throw e;
