@@ -5,10 +5,10 @@ import { Input, Label, Select, Textarea } from "@/components/axis/Field";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
-import { axisFormatSchedule } from "@/lib/ai.functions";
+import { axisFormatSchedule, axisImportArtifact } from "@/lib/ai.functions";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, Copy, Download, Flame, Loader2, Plus, Sparkles, Star, Trash2 } from "lucide-react";
+import { Check, ClipboardPaste, Copy, Download, Flame, Loader2, Plus, Sparkles, Star, Trash2, X } from "lucide-react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
@@ -640,6 +640,8 @@ function ScheduleTab() {
   const [schedule, setSchedule] = useState<ScheduleResult | null>(null);
   const todayIndex = (new Date().getDay() + 6) % 7;
   const [activeDay, setActiveDay] = useState(todayIndex);
+  const [showImport, setShowImport] = useState(false);
+  const [artifactContent, setArtifactContent] = useState("");
 
   const generate = useMutation({
     mutationFn: async () => {
@@ -651,6 +653,22 @@ function ScheduleTab() {
     onSuccess: (data) => {
       setSchedule(data);
       toast.success("Schedule generated!");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const importArtifact = useMutation({
+    mutationFn: async () => {
+      const result = await axisImportArtifact({
+        data: { input: artifactContent, modelId: "axis-swift" },
+      });
+      return result as ScheduleResult;
+    },
+    onSuccess: (data) => {
+      setSchedule(data);
+      setShowImport(false);
+      setArtifactContent("");
+      toast.success("Schedule imported from artifact!");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -710,21 +728,29 @@ function ScheduleTab() {
               <p className="text-xs text-muted-foreground">
                 Just describe your week in plain words — AI will format it into a beautiful schedule.
               </p>
-              <Button
-                type="submit"
-                disabled={generate.isPending || text.trim().length < 10}
-                className="shrink-0"
-              >
-                {generate.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" /> Formatting…
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4" /> Generate
-                  </>
-                )}
-              </Button>
+              <div className="flex gap-2 shrink-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowImport(true)}
+                >
+                  <ClipboardPaste className="h-4 w-4" /> Import Artifact
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={generate.isPending || text.trim().length < 10}
+                >
+                  {generate.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" /> Formatting…
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4" /> Generate
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </form>
         ) : (
@@ -845,6 +871,59 @@ function ScheduleTab() {
           </>
         )}
       </Card>
+
+      {/* Import from Artifact dialog */}
+      {showImport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-lg rounded-2xl border border-border bg-card p-5 shadow-xl">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-foreground">Import from Claude Artifact</h3>
+              <button
+                onClick={() => { setShowImport(false); setArtifactContent(""); }}
+                className="rounded-lg p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="mb-3 text-xs text-muted-foreground">
+              Paste your Claude artifact link (e.g. claude.ai/artifact/...) or paste the artifact content directly.
+              AI will extract and import the schedule.
+            </p>
+            <Textarea
+              rows={4}
+              value={artifactContent}
+              onChange={(e) => setArtifactContent(e.target.value)}
+              placeholder="https://claude.ai/artifact/abc123... or paste artifact content"
+              className="font-mono text-xs"
+            />
+            <div className="mt-3 flex justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => { setShowImport(false); setArtifactContent(""); }}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                disabled={importArtifact.isPending || artifactContent.trim().length < 10}
+                onClick={() => importArtifact.mutate()}
+              >
+                {importArtifact.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Importing…
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" /> Import Schedule
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <p className="text-xs text-muted-foreground">
         Describe your weekly routine in plain words — AI turns it into a beautiful visual schedule you can download and print.
       </p>
