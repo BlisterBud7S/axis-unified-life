@@ -116,6 +116,43 @@ export const axisFormatSchedule = createServerFn({ method: "POST" })
     });
   });
 
+const ImportInput = z.object({
+  input: z.string().min(10).max(100000),
+  modelId: z.string().min(1),
+});
+
+export const axisImportArtifact = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => ImportInput.parse(input))
+  .handler(async ({ data, context }) => {
+    let content = data.input.trim();
+
+    const artifactUrlMatch = content.match(
+      /https?:\/\/claude\.ai\/(?:artifact|code\/artifact)\/[A-Za-z0-9_-]+/,
+    );
+    if (artifactUrlMatch) {
+      try {
+        const res = await fetch(artifactUrlMatch[0], {
+          headers: { Accept: "text/html" },
+          redirect: "follow",
+        });
+        if (res.ok) {
+          content = await res.text();
+        }
+      } catch {
+        // If fetch fails, use the raw input as-is
+      }
+    }
+
+    const { formatSchedule } = await import("@/lib/axis-ai.server");
+    return formatSchedule({
+      supabase: context.supabase,
+      userId: context.userId,
+      modelId: data.modelId,
+      text: `Extract the schedule from this content. It may be HTML from a Claude artifact, markdown, or plain text. Parse every day and time block:\n\n${content.slice(0, 50000)}`,
+    });
+  });
+
 export const axisDocument = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => DocInput.parse(input))

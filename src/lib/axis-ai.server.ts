@@ -468,7 +468,7 @@ export async function formatSchedule(opts: {
   let lastErr: unknown;
   for (let i = 0; i < fallbacks.length; i++) {
     try {
-      raw = await makeCall(fallbacks[i]);
+      raw = await makeCall(fallbacks[i]!);
       break;
     } catch (e: unknown) {
       lastErr = e;
