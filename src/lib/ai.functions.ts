@@ -125,24 +125,7 @@ export const axisImportArtifact = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => ImportInput.parse(input))
   .handler(async ({ data, context }) => {
-    let content = data.input.trim();
-
-    const artifactUrlMatch = content.match(
-      /https?:\/\/claude\.ai\/(?:artifact|code\/artifact)\/[A-Za-z0-9_-]+/,
-    );
-    if (artifactUrlMatch) {
-      try {
-        const res = await fetch(artifactUrlMatch[0], {
-          headers: { Accept: "text/html" },
-          redirect: "follow",
-        });
-        if (res.ok) {
-          content = await res.text();
-        }
-      } catch {
-        // If fetch fails, use the raw input as-is
-      }
-    }
+    const content = data.input.trim();
 
     const { formatSchedule } = await import("@/lib/axis-ai.server");
     return formatSchedule({
