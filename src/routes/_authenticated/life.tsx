@@ -659,8 +659,24 @@ function ScheduleTab() {
 
   const importArtifact = useMutation({
     mutationFn: async () => {
+      let content = artifactContent.trim();
+
+      const urlMatch = content.match(/https?:\/\/claude\.ai\/(?:artifact|code\/artifact)\/[A-Za-z0-9_-]+/);
+      if (urlMatch && content.length < 500) {
+        try {
+          const res = await fetch(urlMatch[0]);
+          if (res.ok) {
+            const html = await res.text();
+            const doc = new DOMParser().parseFromString(html, "text/html");
+            content = doc.body.innerText || doc.body.textContent || html;
+          }
+        } catch {
+          // CORS will block this — fall through to use raw input
+        }
+      }
+
       const result = await axisImportArtifact({
-        data: { input: artifactContent, modelId: "axis-swift" },
+        data: { input: content, modelId: "axis-swift" },
       });
       return result as ScheduleResult;
     },
@@ -885,15 +901,20 @@ function ScheduleTab() {
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <p className="mb-3 text-xs text-muted-foreground">
-              Paste your Claude artifact link (e.g. claude.ai/artifact/...) or paste the artifact content directly.
-              AI will extract and import the schedule.
-            </p>
+            <div className="mb-3 space-y-2 rounded-lg border border-border bg-secondary/30 p-3">
+              <p className="text-xs font-medium text-foreground">How to import:</p>
+              <ol className="list-decimal pl-4 text-xs text-muted-foreground space-y-1">
+                <li>Open your Claude artifact in the browser</li>
+                <li>Select all the text on the page (Ctrl+A / Cmd+A)</li>
+                <li>Copy it (Ctrl+C / Cmd+C)</li>
+                <li>Paste it in the box below</li>
+              </ol>
+            </div>
             <Textarea
-              rows={4}
+              rows={8}
               value={artifactContent}
               onChange={(e) => setArtifactContent(e.target.value)}
-              placeholder="https://claude.ai/artifact/abc123... or paste artifact content"
+              placeholder="Paste the schedule content from your Claude artifact here..."
               className="font-mono text-xs"
             />
             <div className="mt-3 flex justify-end gap-2">
