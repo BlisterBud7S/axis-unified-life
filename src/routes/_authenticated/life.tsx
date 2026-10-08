@@ -659,24 +659,8 @@ function ScheduleTab() {
 
   const importArtifact = useMutation({
     mutationFn: async () => {
-      let content = artifactContent.trim();
-
-      const urlMatch = content.match(/https?:\/\/claude\.ai\/(?:artifact|code\/artifact)\/[A-Za-z0-9_-]+/);
-      if (urlMatch && content.length < 500) {
-        try {
-          const res = await fetch(urlMatch[0]);
-          if (res.ok) {
-            const html = await res.text();
-            const doc = new DOMParser().parseFromString(html, "text/html");
-            content = doc.body.innerText || doc.body.textContent || html;
-          }
-        } catch {
-          // CORS will block this — fall through to use raw input
-        }
-      }
-
       const result = await axisImportArtifact({
-        data: { input: content, modelId: "axis-swift" },
+        data: { input: artifactContent.trim(), modelId: "axis-swift" },
       });
       return result as ScheduleResult;
     },
@@ -901,21 +885,15 @@ function ScheduleTab() {
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="mb-3 space-y-2 rounded-lg border border-border bg-secondary/30 p-3">
-              <p className="text-xs font-medium text-foreground">How to import:</p>
-              <ol className="list-decimal pl-4 text-xs text-muted-foreground space-y-1">
-                <li>Open your Claude artifact in the browser</li>
-                <li>Select all the text on the page (Ctrl+A / Cmd+A)</li>
-                <li>Copy it (Ctrl+C / Cmd+C)</li>
-                <li>Paste it in the box below</li>
-              </ol>
-            </div>
-            <Textarea
-              rows={8}
+            <p className="mb-3 text-xs text-muted-foreground">
+              Paste the link to your published Claude artifact. AI will fetch it and extract the schedule.
+            </p>
+            <input
+              type="url"
               value={artifactContent}
               onChange={(e) => setArtifactContent(e.target.value)}
-              placeholder="Paste the schedule content from your Claude artifact here..."
-              className="font-mono text-xs"
+              placeholder="https://claude.ai/artifact/..."
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
             <div className="mt-3 flex justify-end gap-2">
               <Button
@@ -927,7 +905,7 @@ function ScheduleTab() {
               </Button>
               <Button
                 size="sm"
-                disabled={importArtifact.isPending || artifactContent.trim().length < 10}
+                disabled={importArtifact.isPending || artifactContent.trim().length < 5}
                 onClick={() => importArtifact.mutate()}
               >
                 {importArtifact.isPending ? (

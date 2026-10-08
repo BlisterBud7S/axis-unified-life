@@ -117,7 +117,7 @@ export const axisFormatSchedule = createServerFn({ method: "POST" })
   });
 
 const ImportInput = z.object({
-  input: z.string().min(10).max(100000),
+  input: z.string().min(5).max(100000),
   modelId: z.string().min(1),
 });
 
@@ -125,7 +125,28 @@ export const axisImportArtifact = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => ImportInput.parse(input))
   .handler(async ({ data, context }) => {
-    const content = data.input.trim();
+    let content = data.input.trim();
+
+    const artifactUrl = content.match(
+      /https?:\/\/claude\.ai\/(?:artifact|code\/artifact)\/[A-Za-z0-9_-]+/,
+    )?.[0];
+
+    if (artifactUrl) {
+      const res = await fetch(artifactUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0",
+          Accept: "text/html,application/xhtml+xml,*/*",
+        },
+        redirect: "follow",
+      });
+      if (!res.ok) throw new Error("Could not fetch that artifact — make sure the link is a published (shared) artifact.");
+      const html = await res.text();
+      const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+      content = bodyMatch
+        ? bodyMatch[1]!.replace(/<script[\s\S]*?<\/script>/gi, "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
+        : html.replace(/<script[\s\S]*?<\/script>/gi, "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      if (content.length < 20) throw new Error("The artifact page didn't contain enough text. Make sure it's a published artifact with a schedule.");
+    }
 
     const { formatSchedule } = await import("@/lib/axis-ai.server");
     return formatSchedule({
