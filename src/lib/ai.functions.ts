@@ -117,7 +117,7 @@ export const axisFormatSchedule = createServerFn({ method: "POST" })
   });
 
 const ImportInput = z.object({
-  input: z.string().min(10).max(100000),
+  input: z.string().min(10).max(200000),
   modelId: z.string().min(1),
 });
 
@@ -125,14 +125,30 @@ export const axisImportArtifact = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => ImportInput.parse(input))
   .handler(async ({ data, context }) => {
-    const content = data.input.trim();
+    let content = data.input.trim();
+
+    if (content.includes("<") && content.includes(">")) {
+      content = content
+        .replace(/<style[\s\S]*?<\/style>/gi, "")
+        .replace(/<script[\s\S]*?<\/script>/gi, "")
+        .replace(/<svg[\s\S]*?<\/svg>/gi, "")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s{2,}/g, " ")
+        .trim();
+    }
 
     const { formatSchedule } = await import("@/lib/axis-ai.server");
     return formatSchedule({
       supabase: context.supabase,
       userId: context.userId,
       modelId: data.modelId,
-      text: `Extract the schedule from this content. It may be HTML from a Claude artifact, markdown, or plain text. Parse every day and time block:\n\n${content.slice(0, 50000)}`,
+      text: `You are importing a schedule from pasted content. Extract EVERY activity from ALL 7 days (Monday through Sunday). Do NOT skip any day. Do NOT summarize — include every single time block, workout exercise, class period, meal, and activity mentioned.
+
+For workout blocks, put ALL exercises and sets/reps in the notes field (e.g. "Bench Press 4x8, Incline DB Press 3x10, Cable Flyes 3x12").
+For school blocks, include subject names and room numbers in notes if available.
+For any activity with sub-items or details, capture them all in the notes field.
+
+Here is the content to extract from:\n\n${content.slice(0, 80000)}`,
     });
   });
 
