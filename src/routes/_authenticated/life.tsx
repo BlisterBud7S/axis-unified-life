@@ -10,7 +10,7 @@ import { axisFormatSchedule, axisImportArtifact } from "@/lib/ai.functions";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Check, ClipboardPaste, Copy, Download, Flame, Loader2, Plus, Sparkles, Star, Trash2, X } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/life")({
@@ -645,6 +645,7 @@ function ScheduleTab() {
   const [showImport, setShowImport] = useState(false);
   const [artifactContent, setArtifactContent] = useState("");
   const [savedId, setSavedId] = useState<string | null>(null);
+  const didLoad = useRef(false);
 
   const { data: savedSchedule, isLoading: loadingSaved } = useQuery({
     queryKey: ["saved_schedule", user?.id],
@@ -653,6 +654,7 @@ function ScheduleTab() {
       const { data, error } = await supabase
         .from("saved_schedules")
         .select("id, data")
+        .eq("user_id", user!.id)
         .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -662,9 +664,10 @@ function ScheduleTab() {
   });
 
   useEffect(() => {
-    if (savedSchedule && !schedule && !loadingSaved) {
+    if (savedSchedule && !didLoad.current && !loadingSaved) {
       const loaded = savedSchedule.data as unknown as ScheduleResult;
       if (loaded?.days?.length) {
+        didLoad.current = true;
         setSchedule(loaded);
         setSavedId(savedSchedule.id);
       }
@@ -745,7 +748,7 @@ function ScheduleTab() {
           action={
             schedule ? (
               <button
-                onClick={() => setSchedule(null)}
+                onClick={() => { didLoad.current = false; setSchedule(null); }}
                 className="text-xs text-muted-foreground hover:text-primary"
               >
                 Edit text
