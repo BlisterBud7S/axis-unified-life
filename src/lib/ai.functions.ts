@@ -142,11 +142,14 @@ export const axisImportArtifact = createServerFn({ method: "POST" })
       supabase: context.supabase,
       userId: context.userId,
       modelId: data.modelId,
-      text: `You are importing a schedule from pasted content. Extract EVERY activity from ALL 7 days (Monday through Sunday). Do NOT skip any day. Do NOT summarize — include every single time block, workout exercise, class period, meal, and activity mentioned.
+      text: `You are importing a schedule from pasted content. Extract EVERY activity from ALL 7 days (Monday through Sunday). Do NOT skip any day. Do NOT summarize — include every single time block, workout exercise, class period, meal, spiritual practice, and activity mentioned.
 
-For workout blocks, put ALL exercises and sets/reps in the notes field (e.g. "Bench Press 4x8, Incline DB Press 3x10, Cable Flyes 3x12").
-For school blocks, include subject names and room numbers in notes if available.
-For any activity with sub-items or details, capture them all in the notes field.
+CRITICAL RULES FOR NOTES:
+- For workout/gym blocks: list EVERY exercise as separate items separated by semicolons, e.g. "Bench Press 4x8; Incline DB Press 3x10; Cable Flyes 3x12; Tricep Pushdowns 3x15"
+- For yoga/spiritual/karma/bhakti/meditation blocks: create SEPARATE blocks for each practice type. Put the specific practices, mantras, or activities in notes separated by semicolons.
+- For school blocks: include each subject/period in notes separated by semicolons.
+- For any block with sub-items: put ALL details in notes separated by semicolons. NEVER omit sub-items.
+- If the content has workout plans, spiritual practices (karma yoga, bhakti yoga, jnana yoga, etc.), study guides, or reference sections — create time blocks for them too. Assign reasonable times if none are specified.
 
 Here is the content to extract from:\n\n${content.slice(0, 80000)}`,
     });

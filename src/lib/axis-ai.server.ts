@@ -441,8 +441,8 @@ Rules:
 - Fill in reasonable gaps — if the user mentions "I eat dinner around 7" give it a 30-min slot.
 - If the user describes a general pattern (like "school Mon-Fri 8-3"), apply it to all relevant days.
 - Include all 7 days (Monday through Sunday). If a day isn't mentioned, infer a reasonable routine or mark it as a rest day.
-- notes MUST include ALL detail the user provided: workout exercises with sets/reps, class subjects, meal specifics, room numbers, spiritual practices, reading lists, etc. Pack every sub-item into notes. Use empty string only if truly no detail exists.
-- Be extremely generous with detail in notes — never discard information the user provided.
+- notes MUST include ALL detail the user provided: workout exercises with sets/reps, class subjects, meal specifics, room numbers, spiritual practices, reading lists, etc. Separate each sub-item with a semicolon (;) so they display as a list. Use empty string only if truly no detail exists.
+- Be extremely generous with detail in notes — never discard information the user provided. Example notes: "Bench Press 4x8; Incline DB Press 3x10; Cable Flyes 3x12"
 - Output ONLY valid JSON. No other text.`;
 
 export async function formatSchedule(opts: {
