@@ -121,43 +121,105 @@ const ImportInput = z.object({
   modelId: z.string().min(1),
 });
 
+function extractArtifactData(raw: string): string {
+  const parts: string[] = [];
+
+  const dataMatch = raw.match(/const DATA\s*=\s*\{([\s\S]*?)\n\};/);
+  if (dataMatch) {
+    const dataBlock = dataMatch[1]!;
+    const days = dataBlock.split(/\b(mon|tue|wed|thu|fri|sat|sun)\s*:\s*\{/i);
+    for (let i = 1; i < days.length; i += 2) {
+      const dayKey = days[i]!;
+      const dayContent = days[i + 1] ?? "";
+      const nameMatch = dayContent.match(/name\s*:\s*"([^"]+)"/);
+      const tagMatch = dayContent.match(/tag\s*:\s*"([^"]+)"/);
+      let cleaned = dayContent
+        .replace(/\bex\(\s*/g, "")
+        .replace(/,\s*\{[^}]*muscle[^}]*\}\s*\)/g, ")")
+        .replace(/\{[^}]*armAnim[^}]*\}/g, "")
+        .replace(/\{[^}]*legAnim[^}]*\}/g, "")
+        .replace(/\{[^}]*pulse[^}]*\}/g, "")
+        .replace(/\{[^}]*highlight[^}]*\}/g, "")
+        .replace(/\{[^}]*footAnim[^}]*\}/g, "")
+        .replace(/\{[^}]*upperAnim[^}]*\}/g, "")
+        .replace(/\{[^}]*outerPose[^}]*\}/g, "")
+        .replace(/,\s*\{[^}]*color[^}]*\}/g, "")
+        .replace(/workoutId\s*:\s*"[^"]*"\s*,?/g, "")
+        .replace(/timetable\s*:\s*true\s*,?/g, "[HAS TIMETABLE]");
+      parts.push(`=== ${nameMatch?.[1] ?? dayKey.toUpperCase()} (${tagMatch?.[1] ?? ""}) ===\n${cleaned}`);
+    }
+  }
+
+  const timetableMatch = raw.match(/const TIMETABLE\s*=\s*(\{[\s\S]*?\n\});/);
+  const subjMatch = raw.match(/const SUBJ\s*=\s*(\{[\s\S]*?\n\});/);
+  if (timetableMatch) {
+    parts.push(`\n=== SCHOOL TIMETABLE ===\n${timetableMatch[1]}`);
+  }
+  if (subjMatch) {
+    parts.push(`=== SUBJECTS ===\n${subjMatch[1]}`);
+  }
+  const periodMatch = raw.match(/const PERIOD_TIMES\s*=\s*(\{[\s\S]*?\n\});/);
+  if (periodMatch) {
+    parts.push(`=== PERIOD TIMES ===\n${periodMatch[1]}`);
+  }
+
+  const karmaSection = raw.match(/<section class="mt">([\s\S]*?)<\/section>/);
+  if (karmaSection) {
+    const karmaText = karmaSection[1]!
+      .replace(/<style[\s\S]*?<\/style>/gi, "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+    parts.push(`\n=== KARMA & BHAKTI YOGA MASTER SCHEDULE ===\n${karmaText}`);
+  }
+
+  const practiceSection = raw.match(/<section class="practice">([\s\S]*?)<\/section>/);
+  if (practiceSection) {
+    const practiceText = practiceSection[1]!
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+    parts.push(`\n=== SPIRITUAL PRACTICE GUIDE ===\n${practiceText}`);
+  }
+
+  if (parts.length > 0) return parts.join("\n\n");
+
+  let fallback = raw;
+  if (fallback.includes("<") && fallback.includes(">")) {
+    fallback = fallback
+      .replace(/<style[\s\S]*?<\/style>/gi, "")
+      .replace(/<svg[\s\S]*?<\/svg>/gi, "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+  }
+  return fallback;
+}
+
 export const axisImportArtifact = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => ImportInput.parse(input))
   .handler(async ({ data, context }) => {
-    let content = data.input.trim();
-
-    if (content.includes("<") && content.includes(">")) {
-      content = content
-        .replace(/<style[\s\S]*?<\/style>/gi, "")
-        .replace(/<svg[\s\S]*?<\/svg>/gi, "")
-        .replace(/<[^>]+>/g, " ")
-        .replace(/\s{2,}/g, " ")
-        .trim();
-    }
+    const content = extractArtifactData(data.input.trim());
 
     const { formatSchedule } = await import("@/lib/axis-ai.server");
     return formatSchedule({
       supabase: context.supabase,
       userId: context.userId,
       modelId: data.modelId,
-      text: `You are importing a schedule from pasted content (may include JavaScript data objects, HTML text, or plain text). Extract ABSOLUTELY EVERYTHING from ALL 7 days. Do NOT skip any day. Do NOT summarize.
+      text: `You are importing a schedule. Extract EVERY activity from ALL 7 days. Do NOT skip any day or any detail.
 
-WHAT TO EXTRACT — miss NOTHING:
-1. WORKOUT/GYM: Create a block for each workout session. In notes, list EVERY exercise with sets×reps separated by semicolons. e.g. "Bench Press 4×8; Incline DB Press 3×10; Cable Flyes 3×12"
-2. SCHOOL: Break school into INDIVIDUAL class periods/subjects if available. Each subject gets its own block with its time slot. Don't lump 8 hours into one "School" block.
-3. KARMA YOGA: Create a separate "personal" block for karma yoga practices. List each practice in notes separated by semicolons.
-4. BHAKTI YOGA: Create a separate "personal" block for bhakti yoga. List mantras, prayers, devotional practices in notes separated by semicolons.
-5. MEDITATION/SPIRITUAL: Any spiritual practice gets its own block with details in notes.
-6. MEALS: Each meal gets its own block.
-7. STUDY/HOMEWORK: Include what subjects or topics are studied.
-8. Everything else: sports, rest, personal time — all get blocks.
+RULES:
+1. WORKOUTS: Each gym session is one block. In notes, list EVERY exercise with sets×reps separated by semicolons. e.g. "Chest Press Machine 3×10; Incline Chest Press 2×10; Shoulder Press 3×10"
+2. SCHOOL TIMETABLE: If timetable data exists with periods/subjects, create INDIVIDUAL blocks for each period with subject name and room number in notes. Use the period times given.
+3. KARMA YOGA: For each time slot that has karma yoga content, include the karma yoga action in that block's notes.
+4. BHAKTI YOGA: Include bhakti yoga mantras and devotion steps in the relevant block's notes. Mantras like "Om Namah Shivaya" and "Om Shreem Hreem Gleem Gloum" must appear.
+5. SPIRITUAL PRACTICES: Create a "personal" type block for meditation, mantras, weekend spiritual sessions.
+6. MEALS: Each meal with its specific dish name gets a block.
+7. SPORTS: Football, taekwondo etc. each get their own block.
+8. Use semicolons (;) to separate sub-items in notes.
 
-Look through the ENTIRE content including any JavaScript objects, arrays, or data structures that define schedule items, workout routines, yoga practices, school timetables etc. These contain the real data.
-
-REMEMBER: Use semicolons (;) to separate sub-items in notes. Every detail matters.
-
-Content to extract from:\n\n${content.slice(0, 80000)}`,
+Content:\n\n${content.slice(0, 80000)}`,
     });
   });
 
