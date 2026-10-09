@@ -130,7 +130,6 @@ export const axisImportArtifact = createServerFn({ method: "POST" })
     if (content.includes("<") && content.includes(">")) {
       content = content
         .replace(/<style[\s\S]*?<\/style>/gi, "")
-        .replace(/<script[\s\S]*?<\/script>/gi, "")
         .replace(/<svg[\s\S]*?<\/svg>/gi, "")
         .replace(/<[^>]+>/g, " ")
         .replace(/\s{2,}/g, " ")
@@ -142,16 +141,23 @@ export const axisImportArtifact = createServerFn({ method: "POST" })
       supabase: context.supabase,
       userId: context.userId,
       modelId: data.modelId,
-      text: `You are importing a schedule from pasted content. Extract EVERY activity from ALL 7 days (Monday through Sunday). Do NOT skip any day. Do NOT summarize — include every single time block, workout exercise, class period, meal, spiritual practice, and activity mentioned.
+      text: `You are importing a schedule from pasted content (may include JavaScript data objects, HTML text, or plain text). Extract ABSOLUTELY EVERYTHING from ALL 7 days. Do NOT skip any day. Do NOT summarize.
 
-CRITICAL RULES FOR NOTES:
-- For workout/gym blocks: list EVERY exercise as separate items separated by semicolons, e.g. "Bench Press 4x8; Incline DB Press 3x10; Cable Flyes 3x12; Tricep Pushdowns 3x15"
-- For yoga/spiritual/karma/bhakti/meditation blocks: create SEPARATE blocks for each practice type. Put the specific practices, mantras, or activities in notes separated by semicolons.
-- For school blocks: include each subject/period in notes separated by semicolons.
-- For any block with sub-items: put ALL details in notes separated by semicolons. NEVER omit sub-items.
-- If the content has workout plans, spiritual practices (karma yoga, bhakti yoga, jnana yoga, etc.), study guides, or reference sections — create time blocks for them too. Assign reasonable times if none are specified.
+WHAT TO EXTRACT — miss NOTHING:
+1. WORKOUT/GYM: Create a block for each workout session. In notes, list EVERY exercise with sets×reps separated by semicolons. e.g. "Bench Press 4×8; Incline DB Press 3×10; Cable Flyes 3×12"
+2. SCHOOL: Break school into INDIVIDUAL class periods/subjects if available. Each subject gets its own block with its time slot. Don't lump 8 hours into one "School" block.
+3. KARMA YOGA: Create a separate "personal" block for karma yoga practices. List each practice in notes separated by semicolons.
+4. BHAKTI YOGA: Create a separate "personal" block for bhakti yoga. List mantras, prayers, devotional practices in notes separated by semicolons.
+5. MEDITATION/SPIRITUAL: Any spiritual practice gets its own block with details in notes.
+6. MEALS: Each meal gets its own block.
+7. STUDY/HOMEWORK: Include what subjects or topics are studied.
+8. Everything else: sports, rest, personal time — all get blocks.
 
-Here is the content to extract from:\n\n${content.slice(0, 80000)}`,
+Look through the ENTIRE content including any JavaScript objects, arrays, or data structures that define schedule items, workout routines, yoga practices, school timetables etc. These contain the real data.
+
+REMEMBER: Use semicolons (;) to separate sub-items in notes. Every detail matters.
+
+Content to extract from:\n\n${content.slice(0, 80000)}`,
     });
   });
 
