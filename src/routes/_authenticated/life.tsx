@@ -3,13 +3,14 @@ import { Card, CardTitle } from "@/components/axis/Card";
 import { Header } from "@/components/axis/Header";
 import { Input, Label, Select, Textarea } from "@/components/axis/Field";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { axisFormatSchedule, axisImportArtifact } from "@/lib/ai.functions";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Check, ClipboardPaste, Copy, Download, Flame, Loader2, Plus, Sparkles, Star, Trash2, X } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/life")({
@@ -636,12 +637,57 @@ function escHtml(s: string) {
 
 function ScheduleTab() {
   const { user } = useAuth();
+  const qc = useQueryClient();
   const [text, setText] = useState("");
   const [schedule, setSchedule] = useState<ScheduleResult | null>(null);
   const todayIndex = (new Date().getDay() + 6) % 7;
   const [activeDay, setActiveDay] = useState(todayIndex);
   const [showImport, setShowImport] = useState(false);
   const [artifactContent, setArtifactContent] = useState("");
+  const [savedId, setSavedId] = useState<string | null>(null);
+
+  const { data: savedSchedule, isLoading: loadingSaved } = useQuery({
+    queryKey: ["saved_schedule", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("saved_schedules")
+        .select("id, data")
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  useEffect(() => {
+    if (savedSchedule && !schedule && !loadingSaved) {
+      const loaded = savedSchedule.data as unknown as ScheduleResult;
+      if (loaded?.days?.length) {
+        setSchedule(loaded);
+        setSavedId(savedSchedule.id);
+      }
+    }
+  }, [savedSchedule, loadingSaved]);
+
+  const saveSchedule = async (data: ScheduleResult) => {
+    if (!user) return;
+    if (savedId) {
+      await supabase
+        .from("saved_schedules")
+        .update({ data: data as unknown as Json, name: data.name, updated_at: new Date().toISOString() })
+        .eq("id", savedId);
+    } else {
+      const { data: row } = await supabase
+        .from("saved_schedules")
+        .insert({ user_id: user.id, data: data as unknown as Json, name: data.name })
+        .select("id")
+        .single();
+      if (row) setSavedId(row.id);
+    }
+    qc.invalidateQueries({ queryKey: ["saved_schedule"] });
+  };
 
   const generate = useMutation({
     mutationFn: async () => {
@@ -652,6 +698,7 @@ function ScheduleTab() {
     },
     onSuccess: (data) => {
       setSchedule(data);
+      saveSchedule(data);
       toast.success("Schedule generated!");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -666,6 +713,7 @@ function ScheduleTab() {
     },
     onSuccess: (data) => {
       setSchedule(data);
+      saveSchedule(data);
       setShowImport(false);
       setArtifactContent("");
       toast.success("Schedule imported from artifact!");
