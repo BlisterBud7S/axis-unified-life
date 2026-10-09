@@ -642,6 +642,8 @@ function ScheduleTab() {
   const [activeDay, setActiveDay] = useState(todayIndex);
   const [showImport, setShowImport] = useState(false);
   const [artifactContent, setArtifactContent] = useState("");
+  const [importStep, setImportStep] = useState<"link" | "paste">("link");
+  const [artifactLink, setArtifactLink] = useState("");
 
   const generate = useMutation({
     mutationFn: async () => {
@@ -668,6 +670,8 @@ function ScheduleTab() {
       setSchedule(data);
       setShowImport(false);
       setArtifactContent("");
+      setArtifactLink("");
+      setImportStep("link");
       toast.success("Schedule imported from artifact!");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -885,40 +889,77 @@ function ScheduleTab() {
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <p className="mb-3 text-xs text-muted-foreground">
-              Paste the link to your published Claude artifact. AI will fetch it and extract the schedule.
-            </p>
-            <input
-              type="url"
-              value={artifactContent}
-              onChange={(e) => setArtifactContent(e.target.value)}
-              placeholder="https://claude.ai/artifact/..."
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-            <div className="mt-3 flex justify-end gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => { setShowImport(false); setArtifactContent(""); }}
-              >
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                disabled={importArtifact.isPending || artifactContent.trim().length < 5}
-                onClick={() => importArtifact.mutate()}
-              >
-                {importArtifact.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" /> Importing…
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4" /> Import Schedule
-                  </>
-                )}
-              </Button>
-            </div>
+            {importStep === "link" ? (
+              <>
+                <p className="mb-3 text-xs text-muted-foreground">
+                  Paste the link to your Claude artifact below.
+                </p>
+                <input
+                  type="url"
+                  value={artifactLink}
+                  onChange={(e) => setArtifactLink(e.target.value)}
+                  placeholder="https://claude.ai/artifact/..."
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+                <div className="mt-3 flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setShowImport(false); setArtifactLink(""); }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={!artifactLink.trim().includes("claude.ai/")}
+                    onClick={() => setImportStep("paste")}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="mb-3 rounded-lg border border-border bg-secondary/30 p-3">
+                  <p className="text-xs text-muted-foreground">
+                    Claude artifacts are protected and can't be read directly.
+                    Open <a href={artifactLink} target="_blank" rel="noreferrer" className="underline text-foreground">your artifact</a>, select all the text (<kbd className="rounded bg-secondary px-1 text-[10px]">⌘A</kbd>), copy it (<kbd className="rounded bg-secondary px-1 text-[10px]">⌘C</kbd>), and paste it below.
+                  </p>
+                </div>
+                <Textarea
+                  rows={8}
+                  value={artifactContent}
+                  onChange={(e) => setArtifactContent(e.target.value)}
+                  placeholder="Paste the schedule content here..."
+                  className="font-mono text-xs"
+                  autoFocus
+                />
+                <div className="mt-3 flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setImportStep("link")}
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={importArtifact.isPending || artifactContent.trim().length < 10}
+                    onClick={() => importArtifact.mutate()}
+                  >
+                    {importArtifact.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" /> Importing…
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4" /> Import Schedule
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
