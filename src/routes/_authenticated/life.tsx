@@ -835,7 +835,18 @@ function ScheduleTab() {
                             </span>
                             <span className="text-sm font-semibold text-foreground">{b.label}</span>
                             {b.notes ? (
-                              <span className="text-xs italic text-muted-foreground">{b.notes}</span>
+                              <div className="mt-1 space-y-0.5">
+                                {b.notes.split(/[;\n]/).map((line, li) => {
+                                  const t = line.trim();
+                                  if (!t) return null;
+                                  return (
+                                    <div key={li} className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                                      <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-muted-foreground/50" />
+                                      <span>{t}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
                             ) : null}
                             <span className="text-[10px] tracking-wider text-muted-foreground uppercase">
                               {b.type}
