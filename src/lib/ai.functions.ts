@@ -121,74 +121,152 @@ const ImportInput = z.object({
   modelId: z.string().min(1),
 });
 
-function extractArtifactData(raw: string): string {
-  const parts: string[] = [];
+type Block = { time: string; label: string; type: string; notes: string };
+type DayData = { day: string; tag: string; blocks: Block[] };
+type ScheduleResult = { name: string; days: DayData[] };
 
-  const dataMatch = raw.match(/const DATA\s*=\s*\{([\s\S]*?)\n\};/);
-  if (dataMatch) {
-    const dataBlock = dataMatch[1]!;
-    const days = dataBlock.split(/\b(mon|tue|wed|thu|fri|sat|sun)\s*:\s*\{/i);
-    for (let i = 1; i < days.length; i += 2) {
-      const dayKey = days[i]!;
-      const dayContent = days[i + 1] ?? "";
-      const nameMatch = dayContent.match(/name\s*:\s*"([^"]+)"/);
-      const tagMatch = dayContent.match(/tag\s*:\s*"([^"]+)"/);
-      let cleaned = dayContent
-        .replace(/\bex\(\s*/g, "")
-        .replace(/,\s*\{[^}]*muscle[^}]*\}\s*\)/g, ")")
-        .replace(/\{[^}]*armAnim[^}]*\}/g, "")
-        .replace(/\{[^}]*legAnim[^}]*\}/g, "")
-        .replace(/\{[^}]*pulse[^}]*\}/g, "")
-        .replace(/\{[^}]*highlight[^}]*\}/g, "")
-        .replace(/\{[^}]*footAnim[^}]*\}/g, "")
-        .replace(/\{[^}]*upperAnim[^}]*\}/g, "")
-        .replace(/\{[^}]*outerPose[^}]*\}/g, "")
-        .replace(/,\s*\{[^}]*color[^}]*\}/g, "")
-        .replace(/workoutId\s*:\s*"[^"]*"\s*,?/g, "")
-        .replace(/timetable\s*:\s*true\s*,?/g, "[HAS TIMETABLE]");
-      parts.push(`=== ${nameMatch?.[1] ?? dayKey.toUpperCase()} (${tagMatch?.[1] ?? ""}) ===\n${cleaned}`);
+const DAY_NAMES: Record<string, string> = {
+  mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday",
+  fri: "Friday", sat: "Saturday", sun: "Sunday",
+};
+const DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+
+function splitBlocks(dayContent: string): string[] {
+  const result: string[] = [];
+  const starts: number[] = [];
+  const re = /\{t\s*:\s*"/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(dayContent)) !== null) starts.push(m.index);
+  for (let i = 0; i < starts.length; i++) {
+    const chunk = dayContent.slice(starts[i]!, starts[i + 1] ?? dayContent.length);
+    result.push(chunk.replace(/,?\s*\]\s*\}\s*,?\s*$/, "").trim());
+  }
+  return result;
+}
+
+function parseBlock(chunk: string): { time: string; label: string; type: string; notes: string; hasTimetable: boolean; exercises: string[] } | null {
+  const hdr = chunk.match(/\{t\s*:\s*"([^"]+)"\s*,\s*l\s*:\s*"([^"]+)"\s*,\s*type\s*:\s*"([^"]+)"/);
+  if (!hdr) return null;
+  const notesMatch = chunk.match(/,\s*n\s*:\s*"((?:[^"\\]|\\.)*)"/);
+  const notes = notesMatch ? notesMatch[1]!.replace(/\\"/g, '"').replace(/\\n/g, "\n") : "";
+  const hasTimetable = /timetable\s*:\s*true/.test(chunk);
+  const exercises: string[] = [];
+  const exRe = /ex\(\s*"((?:[^"\\]|\\.)*)"\s*,\s*"((?:[^"\\]|\\.)*)"/g;
+  let em: RegExpExecArray | null;
+  while ((em = exRe.exec(chunk)) !== null) {
+    exercises.push(`${em[1]!.replace(/\\"/g, '"')} ${em[2]!.replace(/\\"/g, '"')}`);
+  }
+  return { time: hdr[1]!, label: hdr[2]!, type: hdr[3]!, notes, hasTimetable, exercises };
+}
+
+function tryDirectParse(raw: string): ScheduleResult | null {
+  if (!raw.includes("const DATA")) return null;
+
+  const periodTimes: Record<string, string> = {};
+  const ptMatch = raw.match(/const PERIOD_TIMES\s*=\s*\{([^}]+)\}/);
+  if (ptMatch) {
+    const ptRe = /(\w+)\s*:\s*"([^"]+)"/g;
+    let ptM: RegExpExecArray | null;
+    while ((ptM = ptRe.exec(ptMatch[1]!)) !== null) {
+      periodTimes[ptM[1]!] = ptM[2]!;
     }
   }
 
-  const timetableMatch = raw.match(/const TIMETABLE\s*=\s*(\{[\s\S]*?\n\});/);
-  const subjMatch = raw.match(/const SUBJ\s*=\s*(\{[\s\S]*?\n\});/);
-  if (timetableMatch) {
-    parts.push(`\n=== SCHOOL TIMETABLE ===\n${timetableMatch[1]}`);
-  }
+  const subjects: Record<string, [string, string, string | null]> = {};
+  const subjMatch = raw.match(/const SUBJ\s*=\s*\{([\s\S]*?)\n\};/);
   if (subjMatch) {
-    parts.push(`=== SUBJECTS ===\n${subjMatch[1]}`);
-  }
-  const periodMatch = raw.match(/const PERIOD_TIMES\s*=\s*(\{[\s\S]*?\n\});/);
-  if (periodMatch) {
-    parts.push(`=== PERIOD TIMES ===\n${periodMatch[1]}`);
-  }
-
-  const karmaSection = raw.match(/<section class="mt">([\s\S]*?)<\/section>/);
-  if (karmaSection) {
-    const karmaText = karmaSection[1]!
-      .replace(/<style[\s\S]*?<\/style>/gi, "")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s{2,}/g, " ")
-      .trim();
-    parts.push(`\n=== KARMA & BHAKTI YOGA MASTER SCHEDULE ===\n${karmaText}`);
+    const sjRe = /(\w+)\s*:\s*\[([^\]]+)\]/g;
+    let sjM: RegExpExecArray | null;
+    while ((sjM = sjRe.exec(subjMatch[1]!)) !== null) {
+      const vals = sjM[2]!.match(/"([^"]*)"/g)?.map((s) => s.replace(/"/g, "")) ?? [];
+      subjects[sjM[1]!] = [vals[0] ?? sjM[1]!, vals[1] ?? "", vals[2] === "null" || !vals[2] ? null : vals[2]] as [string, string, string | null];
+    }
   }
 
-  const practiceSection = raw.match(/<section class="practice">([\s\S]*?)<\/section>/);
-  if (practiceSection) {
-    const practiceText = practiceSection[1]!
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s{2,}/g, " ")
-      .trim();
-    parts.push(`\n=== SPIRITUAL PRACTICE GUIDE ===\n${practiceText}`);
+  const timetable: Record<string, Record<string, string[]>> = {};
+  const ttMatch = raw.match(/const TIMETABLE\s*=\s*\{([\s\S]*?)\n\};/);
+  if (ttMatch) {
+    const wkRe = /([AB])\s*:\s*\{([\s\S]*?)\n\s*\}/g;
+    let wkM: RegExpExecArray | null;
+    while ((wkM = wkRe.exec(ttMatch[1]!)) !== null) {
+      timetable[wkM[1]!] = {};
+      const dmRe = /(\w+)\s*:\s*\[([^\]]+)\]/g;
+      let dmM: RegExpExecArray | null;
+      while ((dmM = dmRe.exec(wkM[2]!)) !== null) {
+        timetable[wkM[1]!]![dmM[1]!] = dmM[2]!.match(/"(\w+)"/g)?.map((s) => s.replace(/"/g, "")) ?? [];
+      }
+    }
   }
 
-  if (parts.length > 0) return parts.join("\n\n");
+  const dataMatch = raw.match(/const DATA\s*=\s*\{([\s\S]*?)\n\};/);
+  if (!dataMatch) return null;
 
+  const days: DayData[] = [];
+  const fullData = dataMatch[1]!;
+
+  const dayStarts: Array<{ key: string; idx: number }> = [];
+  for (const dk of DAY_ORDER) {
+    const re = new RegExp(`\\b${dk}\\s*:\\s*\\{`, "i");
+    const dm = fullData.match(re);
+    if (dm) dayStarts.push({ key: dk, idx: dm.index! });
+  }
+  dayStarts.sort((a, b) => a.idx - b.idx);
+
+  for (let di = 0; di < dayStarts.length; di++) {
+    const { key: dayKey, idx: startIdx } = dayStarts[di]!;
+    const endIdx = di + 1 < dayStarts.length ? dayStarts[di + 1]!.idx : fullData.length;
+    const dayContent = fullData.slice(startIdx, endIdx);
+
+    const nameMatch = dayContent.match(/name\s*:\s*"([^"]+)"/);
+    const tagMatch = dayContent.match(/tag\s*:\s*"([^"]+)"/);
+    const dayName = nameMatch?.[1] ?? DAY_NAMES[dayKey]!;
+    const tag = tagMatch?.[1] ?? "";
+
+    const blocks: Block[] = [];
+    for (const chunk of splitBlocks(dayContent)) {
+      const b = parseBlock(chunk);
+      if (!b) continue;
+
+      if (b.hasTimetable && Object.keys(periodTimes).length > 0) {
+        blocks.push({ time: b.time, label: b.label, type: b.type, notes: b.notes });
+        const weekB = timetable["B"]?.[dayKey] ?? [];
+        const weekA = timetable["A"]?.[dayKey] ?? [];
+        const pKeys = Object.keys(periodTimes);
+        for (let pi = 0; pi < pKeys.length && pi < weekB.length; pi++) {
+          const pKey = pKeys[pi]!;
+          const pTime = periodTimes[pKey]!;
+          const subjKeyB = weekB[pi]!;
+          const subjKeyA = weekA[pi] ?? subjKeyB;
+          const [nameB, numB, roomB] = subjects[subjKeyB] ?? [subjKeyB, "", null];
+          const [nameA] = subjects[subjKeyA] ?? [subjKeyA, "", null];
+          let periodLabel = `${nameB} ${numB}`;
+          if (nameA !== nameB) periodLabel += ` (Week A: ${nameA})`;
+          let periodNotes = pKey;
+          if (roomB) periodNotes += `; Room ${roomB}`;
+          blocks.push({ time: pTime, label: periodLabel, type: "school", notes: periodNotes });
+        }
+      } else if (b.exercises.length > 0) {
+        const exNotes = b.exercises.join("; ");
+        blocks.push({ time: b.time, label: b.label, type: b.type, notes: b.notes ? `${b.notes}; ${exNotes}` : exNotes });
+      } else {
+        blocks.push({ time: b.time, label: b.label, type: b.type, notes: b.notes });
+      }
+    }
+
+    days.push({ day: dayName, tag, blocks });
+  }
+
+  if (days.length === 0) return null;
+  return { name: "Weekly Schedule", days };
+}
+
+function extractArtifactData(raw: string): string {
   let fallback = raw;
   if (fallback.includes("<") && fallback.includes(">")) {
     fallback = fallback
       .replace(/<style[\s\S]*?<\/style>/gi, "")
       .replace(/<svg[\s\S]*?<\/svg>/gi, "")
+      .replace(/<script[\s\S]*?<\/script>/gi, "")
       .replace(/<[^>]+>/g, " ")
       .replace(/\s{2,}/g, " ")
       .trim();
@@ -200,8 +278,16 @@ export const axisImportArtifact = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => ImportInput.parse(input))
   .handler(async ({ data, context }) => {
-    const content = extractArtifactData(data.input.trim());
+    const raw = data.input.trim();
 
+    const direct = tryDirectParse(raw);
+    if (direct) {
+      const { resolveAccess } = await import("@/lib/axis-ai.server");
+      await resolveAccess(context.supabase, context.userId, data.modelId);
+      return direct;
+    }
+
+    const content = extractArtifactData(raw);
     const { formatSchedule } = await import("@/lib/axis-ai.server");
     return formatSchedule({
       supabase: context.supabase,
@@ -210,14 +296,12 @@ export const axisImportArtifact = createServerFn({ method: "POST" })
       text: `You are importing a schedule. Extract EVERY activity from ALL 7 days. Do NOT skip any day or any detail.
 
 RULES:
-1. WORKOUTS: Each gym session is one block. In notes, list EVERY exercise with sets×reps separated by semicolons. e.g. "Chest Press Machine 3×10; Incline Chest Press 2×10; Shoulder Press 3×10"
-2. SCHOOL TIMETABLE: If timetable data exists with periods/subjects, create INDIVIDUAL blocks for each period with subject name and room number in notes. Use the period times given.
-3. KARMA YOGA: For each time slot that has karma yoga content, include the karma yoga action in that block's notes.
-4. BHAKTI YOGA: Include bhakti yoga mantras and devotion steps in the relevant block's notes. Mantras like "Om Namah Shivaya" and "Om Shreem Hreem Gleem Gloum" must appear.
-5. SPIRITUAL PRACTICES: Create a "personal" type block for meditation, mantras, weekend spiritual sessions.
-6. MEALS: Each meal with its specific dish name gets a block.
-7. SPORTS: Football, taekwondo etc. each get their own block.
-8. Use semicolons (;) to separate sub-items in notes.
+1. WORKOUTS: Each gym session is one block. In notes, list EVERY exercise with sets×reps separated by semicolons.
+2. SCHOOL TIMETABLE: If timetable data exists, create INDIVIDUAL blocks for each period.
+3. Include karma yoga, bhakti yoga mantras in each block's notes.
+4. MEALS: Each meal with its specific dish name gets a block.
+5. SPORTS: Football, taekwondo etc. each get their own block.
+6. Use semicolons (;) to separate sub-items in notes.
 
 Content:\n\n${content.slice(0, 80000)}`,
     });
