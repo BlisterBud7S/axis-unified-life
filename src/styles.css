@@ -44,6 +44,9 @@
   --color-cat-school: #22c55e;
   --color-cat-health: #f97316;
   --color-cat-finance: #eab308;
+  --color-gold: var(--gold);
+  --color-gold-light: var(--gold-light);
+  --color-gold-dim: var(--gold-dim);
 }
 
 :root {
@@ -65,6 +68,10 @@
   --destructive: #ef4444;
   --success: #22c55e;
   --warning: #f59e0b;
+  --gold: #d4a54a;
+  --gold-light: #e8c878;
+  --gold-dim: #b8923e;
+  --gold-glow: rgba(212, 165, 74, 0.15);
   --border: #1e293b;
   --input: #1e293b;
   --ring: #3b82f6;
@@ -100,4 +107,29 @@
   box-shadow:
     0 0 0 1px var(--accent),
     0 0 32px -8px var(--accent);
+}
+
+@utility glow-gold {
+  box-shadow:
+    0 0 0 1px var(--gold-dim),
+    0 0 40px -8px var(--gold-glow);
+}
+
+@utility glass-gold {
+  background: linear-gradient(135deg, rgba(212, 165, 74, 0.06), rgba(17, 24, 39, 0.6));
+  border: 1px solid rgba(212, 165, 74, 0.15);
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
+}
+
+@utility gold-gradient-text {
+  background: linear-gradient(135deg, var(--gold-light), var(--gold), var(--gold-dim));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+@utility gold-line {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold-dim), var(--gold), var(--gold-dim), transparent);
 }

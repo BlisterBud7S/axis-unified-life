@@ -13,7 +13,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-4">
-          <Link to="/" className="text-lg font-semibold tracking-[0.2em] text-foreground">
+          <Link to="/" className="text-lg font-semibold tracking-[0.2em] gold-gradient-text">
             AXIS
           </Link>
           <nav className="hidden items-center gap-5 text-sm text-muted-foreground md:flex">
@@ -32,7 +32,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
             </Link>
             <Link
               to="/auth/signup"
-              className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/85"
+              className="rounded-xl bg-gradient-to-r from-gold-dim via-gold to-gold-light px-4 py-2 text-sm font-medium text-background hover:opacity-90 transition-opacity"
             >
               Get started
             </Link>
